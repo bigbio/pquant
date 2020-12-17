@@ -5,7 +5,7 @@ from collections import Counter
 
 
 def function(sequence, reference):
-    evi_sequence = []  # 总清洗数据
+    evi_sequence = []  # Total cleaning data
     evi_modified_sequence = []
     out_C = []
     evi_modifications = []
@@ -16,8 +16,8 @@ def function(sequence, reference):
         while "(" in top:
             a = top.find('(')
             b = top.find(')')
-            top = top.replace(top[a:b + 1], '')  # 括号中的数据替换为空
-        result = re.sub('[\W_\d]+', '', top)  # 指筛选字符
+            top = top.replace(top[a:b + 1], '')  # Replace the data in parentheses with null
+        result = re.sub('[\W_\d]+', '', top)  # It means a filter character
         evi_sequence.append(result)
         evi_experiment.append(reference[i][:-5])
     #print(len(evi_sequence))
@@ -35,7 +35,7 @@ def function(sequence, reference):
             b = top.find(')')
             c = a + next
             d = b + next
-            temp = k[c + 1:c + 3]  # 前两个字符串小写
+            temp = k[c + 1:c + 3]  # The first two strings are lowercase
             temp = temp.lower()
             k = k.replace(k[c + 1:d], temp)
             top = top.replace(top[a:b + 1], '')
@@ -46,21 +46,21 @@ def function(sequence, reference):
     
     for i in range(0, len(csv_PeptideSequence)):
         top = csv_PeptideSequence[i]
-        flag = True   # True 代表这行无修饰
+        flag = True   # True means this sequence is unmodification 
         out_C = {}
         while "(" in top:
             flag = False
             a = top.find('(')
             b = top.find(')')
-            temp = top[a + 1: b]  # 存放修饰
-            lent = len(top.split(temp)) - 1  # 修饰出现次数
+            temp = top[a + 1: b]  # Store modification
+            lent = len(top.split(temp)) - 1  # Number of modifications' occurrences
             top = top.replace(top[a:b + 1], '')
             out_C[temp] = lent
         
-        # 将字典转化成数组
+        # Convert a dictionary into an array
         tem = []
         for key, value in out_C.items():
-            if value == 1:  # 如果只出现一次，就不用显示出现次数
+            if value == 1:  # If the modification occurs only once, the number need not be displayed
                 tem.append(key)
             else:
                 tem.append(str(value) + ' ' + key)
@@ -75,7 +75,7 @@ def function(sequence, reference):
 
 if __name__ == "__main__":
     
-    # TODO 此代码实现数据处理
+    # TODO data processing
     now_dir = r"D:\dataset\R downstream analysis\proteus\code"
     csv = now_dir + '\\' + "out.csv"
     mztab = now_dir + '\\' + "pep.csv"
@@ -107,14 +107,14 @@ if __name__ == "__main__":
         "intensity": evi_intensity})
     evidence.to_csv(r"result_1.csv")
     
-    # TODO：以下代码实现VLOOKUP函数操作(可以写成两个函数实现)
+    # TODO：Implements the VLOOKUP function
     data_text = "result_1.csv"
     pep_text = "pep.csv"
     pep = pd.read_csv(pep_text)
     df = pd.read_csv(data_text)
     data = df["PeptideSequence"]
     Pep = pep[["sequence", "accession"]]
-    Pep = Pep.drop_duplicates(subset="sequence")  # 对第二个表去重复
+    Pep = Pep.drop_duplicates(subset="sequence")  # Delete the duplicate values in the second table
     #print(data.shape)
     df_merge = pd.merge(left=df, right=Pep, left_on="PeptideSequence", right_on="sequence", how='left', )
     #print(df_merge.shape)
