@@ -1,9 +1,9 @@
 #! /usr/bin/R
 
 library(proteus)
-evi <- read.csv("D:/dataset/R downstream analysis/proteus/ourdata/evidence.csv")
-meta <- read.csv("D:/dataset/R downstream analysis/proteus/ourdata/metadata.csv")
-setwd("D:/dataset/R downstream analysis/proteus/ourdata/")
+setwd(getwd())  # The path where you store this R script
+evi <- read.csv("./evidence.csv")
+meta <- read.csv("./metadata.csv")
 pepdat <- makePeptideTable(evi, meta)
 prodat <- makeProteinTable(pepdat)
 prodat.med <- normalizeData(prodat)

@@ -1,8 +1,9 @@
 #! /usr/bin/R
 
 library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
-setwd('D:/dataset/R downstream analysis/MSstats/output')  # user your own path
-data <- read.csv("D:/dataset/R downstream analysis/MSstats/ourdata/out.csv") # from RPXD012431.1
+setwd(getwd())  # The path where you store this R script
+setwd('./output') # Store the output plots
+data <- read.csv("../datasets/out.csv") # from RPXD012431.1
 
 #default option
 DDA2009.proposed <- dataProcess(raw = data,
