@@ -11,9 +11,9 @@ Because the application is in developing, the test figures are drawn by test R p
 * Run test_MSstats.R.<br>
 `tips: You should put the R scripts and the test data in a same path, if you want to put it in a different path, please modify the code that reads the path`<br>
 test_MSstats.R can draw many plots such as Heatmap, Volcano Plot, QC plot, Condition plot, Comparison plot and so on.<br>
-![](https://github.com/Douerww/pquantR/tree/main/image/MSstats_output.png)
+![](https://github.com/Douerww/pquantR/blob/main/image/MSstats_output.png)
 3. Use proteus to draw the figures.
 * Run test_proteus.R<br>
 `tips: You should put the R scripts and the test data in a same path, if you want to put it in a different path, please modify the code that reads the path`<br>
 test_proteus.R can create a peptide dataset, create protein dataset, aggregate protein and draw a volcano plot. The path where you store this R script.<br>
-![](https://github.com/Douerww/pquantR/tree/main/image/proteus_output.png)
+![](https://github.com/Douerww/pquantR/blob/main/image/proteus_output.png)
