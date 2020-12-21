@@ -3,7 +3,7 @@ pquantR is a R shiny application which is designed to do the downstream analysis
 Because the application is in developing, the test figures are drawn by test R packages separately now.<br>
 ## Test procedure
 1. Preparing the test data for proteus.<br>
-* Download out.csv and out.mzTab from [this page](ftp://ftp.pride.ebi.ac.uk/pride/data/proteomes/RPXD012431.1/proteomics_lfq).
+* Download out.csv and out.mzTab from [this page](http://ftp.pride.ebi.ac.uk/pride/data/proteomes/RPXD012431.1/proteomics_lfq/).
 * Run get_proteus_evidence.py, it will combine out.csv and out.mzTab to obtain the evidence.csv, as input of proteus. (It still have some bugs)
 * The metadata.csv (for proteus) is manual annotated in “datasets”. We will code a python file to get it in the future.
 
