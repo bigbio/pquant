@@ -1,0 +1,15 @@
+Package: pquantR
+Title: Downstream analysis of proteomics data
+Version: 0.0.0.9000
+Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
+Description: pquantR is a R shiny application which is designed to do the downstream analysis
+             of proteomics dataset, currently these figures are included: Heatmap, Volcano Plot 
+             and QC plot.
+Depends: R (>= 3.5.2)
+License: GPL3
+Encoding: UTF-8
+LazyData: true
+Imports:
+    limma,
+    proteus,
+    MSstats
