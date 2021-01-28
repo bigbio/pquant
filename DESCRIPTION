@@ -12,4 +12,5 @@ LazyData: true
 Imports:
     limma,
     proteus,
-    MSstats
+    MSstats,
+    dplyr
