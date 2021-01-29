@@ -1,8 +1,19 @@
 # pquant
-pquantR is a R shiny application which is designed to do the downstream analysis of proteomics dataset, currently these figures are included: Heatmap, Volcano Plot, QC plot.<br>
-Because the application is in developing, the test figures are drawn by test R packages separately now.<br>
+
+pquantR is a Python/R application which is designed to do the downstream analysis of proteomics datasets from http://github.com/bigbio/proteomicslfq. The library allows to perform statistical analysis with different R packages and Python tools including:
+
+- MSstats
+- Proteus
+- Triqler
+
+Finally, a set of plots are generated for the end-user, currently these figures are included:
+
+- Heatmap, Volcano Plot, QC plot.<br>
+
 ## Test procedure
+
 1. Preparing the test data for proteus.<br>
+
 * Download out.csv and out.mzTab from [this page](http://ftp.pride.ebi.ac.uk/pride/data/proteomes/RPXD012431.1/proteomics_lfq/).
 * Run get_proteus_evidence.py, it will combine out.csv and out.mzTab to obtain the evidence.csv, as input of proteus. (It still have some bugs)
 * The metadata.csv (for proteus) is manual annotated in “datasets”. We will code a python file to get it in the future.
