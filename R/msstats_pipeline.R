@@ -59,7 +59,7 @@ dataProcessPlots(data = data.processed,
 # TODO: function to generate contrast matrix for comparitions
 comparison1 <- matrix(c(-1,1,0,0,0,0,0,0,0),nrow=1)
 comparison2 <- matrix(c(0,-1,1,0,0,0,0,0,0),nrow=1)
-comparison<-rbind(comparison1, comparison2)
+comparison <- rbind(comparison1, comparison2)
 
 row.names(comparison) <- c("C1-C2", "C2-C3")
 data.comparisons <- groupComparison(contrast.matrix = comparison, data = data.processed)
