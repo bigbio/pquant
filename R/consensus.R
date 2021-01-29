@@ -58,8 +58,8 @@ data.msstats <- dataProcess(raw = data,
 
 # set condition combination
 # TODO: function to generate contrast matrix for comparitions
-comparison1 <- matrix(c(-1,1,0,0,0,0,0,0,0),nrow=1)
-row.names(comparison1) <- "C1-C2"
+comparison <- matrix(c(-1,1,0,0,0,0,0,0,0),nrow=1)
+row.names(comparison) <- "C1-C2"
 
 # run differencial expression analysis (only two conditions)
 res.msstats <- groupComparison(contrast.matrix = comparison, data = data.msstats)
@@ -92,6 +92,9 @@ venn.diagram(
   x = list(as.character(proteus.up.set), as.character(msstats.up.set)),
   main = 'Up-regulated (logFC > 0, Adjusted P < 0.05)',
   category.names = c("Proteus" , "MSstats"),
+  height = 480,
+  width = 480,
+  resolution = 300,
   filename = 'venn_diagramm_up.png',
   fill=c('blue', 'grey'),
   output=TRUE
@@ -105,6 +108,9 @@ venn.diagram(
   x = list(as.character(proteus.down.set), as.character(msstats.down.set)),
   main = 'Down-regulated (logFC < 0, Adjusted P < 0.05)',
   category.names = c("Proteus" , "MSstats"),
+  height = 480,
+  width = 480,
+  resolution = 300,
   filename = 'venn_diagramm_down.png',
   fill=c('blue', 'grey'),
   output=TRUE
