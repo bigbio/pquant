@@ -1,4 +1,4 @@
-# pquantR
+# pquant
 pquantR is a R shiny application which is designed to do the downstream analysis of proteomics dataset, currently these figures are included: Heatmap, Volcano Plot, QC plot.<br>
 Because the application is in developing, the test figures are drawn by test R packages separately now.<br>
 ## Test procedure
