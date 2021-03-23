@@ -4,7 +4,8 @@ name: pquant-conda
 channels:
   - bioconda
   - r
+  - conda-forge
 dependencies:
   - conda-forge::python=3.8.5
-  - r::r-shinydashboard
-  - r::r-irkernel
+  - bioconda::bioconductor-msstats
+  - bioconda::triqler
