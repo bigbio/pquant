@@ -9,3 +9,4 @@ dependencies:
   - conda-forge::python=3.8.5
   - bioconda::bioconductor-msstats
   - bioconda::triqler
+  - conda-forge::r-devtools

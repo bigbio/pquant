@@ -10,8 +10,7 @@ conda env create --quiet -f environment.yml && conda clean -a
 # activate the environment
 conda activate pquant-conda
 
-# install R packages
-conda install -c conda-forge r-devtools
+# Active R environment.
 R
 
 if (!requireNamespace("BiocManager", quietly = TRUE))
