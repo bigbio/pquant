@@ -10,3 +10,5 @@ dependencies:
   - bioconda::bioconductor-msstats
   - bioconda::triqler
   - conda-forge::r-devtools
+  - bioconda::bioconductor-limma
+  - conda-forge::r-ggplot2
