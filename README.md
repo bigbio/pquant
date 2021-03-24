@@ -47,12 +47,3 @@ shiny::runApp('./shiny-app')
 2. Consider adding interactive buttons in the volcano and QC boxes so that users can see all the generated plots in the same window.<br>
 3. Consider not displaying the name in the future or change a R package.<br>
 4. Add color descriptions to the heat map or change a R package.<br>
-
-## How to install
-
-The enviroment can be install using the enviroment.yaml file which creates a conda enviroment
-
-```bash
-$> conda env create --quiet -f /environment.yml && conda clean -a
-```
-
