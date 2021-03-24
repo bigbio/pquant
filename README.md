@@ -1,7 +1,26 @@
 # pquant
-pquantR is a R shiny application which is designed to do the downstream analysis of proteomics dataset, currently these figures are included: Heatmap, Volcano Plot, QC plot.<br>
+
+pquantR is a python and R package to perform downstream analysis of proteomicsLFQ quantitative data. It also included R shiny application which is designed to do the downstream analysis of proteomics dataset, currently these figures are included: Heatmap, Volcano Plot, QC plot.<br>
+
 Because the application is in developing, the test figures are drawn by test R packages separately now.<br>
-## Test procedure
+
+## Installation of environment
+
+The `build.sh` bash script use conda and mamba to install the environment to install all the dependencies and packahes in python and R.
+
+Prerequisites:
+
+- conda (https://conda.io/projects/conda/en/latest/user-guide/install/index.html)
+- mamba (https://github.com/mamba-org/mamba)
+
+After the installation of conda and mamba you can run the following script:
+
+```bash
+$> source build.sh
+```
+
+## Shiny application
+
 1. Preparing  for shiny app.<br>
 * Download `ups1-uniprot-comet-proteomics_lfq.zip` from [this page](https://github.com/bigbio/pquant/issues/7), we need `out_msstats.csv` in this zip.<br>
 * Download `shiny-app` folder from [this page](https://github.com/Douerww/pquantR/tree/main/shiny-app) and put it in a suitable working path.
