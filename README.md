@@ -18,6 +18,10 @@ After the installation of conda and mamba you can run the following script:
 ```bash
 $> source build.sh
 ```
+## sample datasets
+
+- UPS1:
+  - Configuration run from proteomicsLFQ  (unique peptides, star align, stricter pep and protein FDR) - https://ftp.pride.ebi.ac.uk/pride/data/proteomes/ups1/unique-peptides-star-align-stricter-pep-protein-FDR/
 
 ## Shiny application
 
