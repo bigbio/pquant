@@ -10,7 +10,7 @@ mamba env create --file environment.yml && conda clean -a -y
 conda activate pquant-conda
 
 # Active R environment.
-R -e "install.packages('BiocManager', repos = http://cran.us.r-project.org')"
+R -e "install.packages('BiocManager', repos = 'http://cran.us.r-project.org')"
 R -e "BiocManager::install()"
 R -e "devtools::install_github('bartongroup/proteusLabelFree')"
 R -e "devtools::install_github('bartongroup/proteusTMT')"
