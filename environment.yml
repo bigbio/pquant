@@ -12,3 +12,5 @@ dependencies:
   - conda-forge::r-devtools
   - bioconda::bioconductor-limma
   - conda-forge::r-ggplot2
+  - conda-forge::pandas
+  - conda-forge::numpy
