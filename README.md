@@ -22,6 +22,7 @@ $> source build.sh
 
 - UPS1:
   - Configuration run from proteomicsLFQ  (unique peptides, star align, stricter pep and protein FDR) - [unique-peptides-star-align-stricter-pep-protein-FDR](https://ftp.pride.ebi.ac.uk/pride/data/proteomes/ups1/unique-peptides-star-align-stricter-pep-protein-FDR/proteomics_lfq/)
+  - Configuration run from proteomicsLFQ  (unique peptides, target-only, star align, stricter pep and protein FDR) - [unique-peptides-target-only-star-align-stricter-pep-protein-FDR]()
 
 
 ## Shiny application
