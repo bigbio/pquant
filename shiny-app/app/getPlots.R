@@ -3,7 +3,7 @@
 #setwd(getwd())  # The path where you store this R script
 #setwd('./output') # Store the output plots
 
-getPlot <- function(fileData, flag, DDA2009.proposed){
+getPlot <- function(fileData, flag){
 #default option
 DDA2009.proposed <- dataProcess(raw = fileData,
                                 normalization = 'equalizeMedians',
@@ -60,8 +60,19 @@ if (flag == 'volcano'){
 
 # Heatmaps
 if (flag == 'heat'){
-  groupComparisonPlots(data = DDA2009.comparisons$ComparisonResult, type = 'Heatmap',
-                       address=FALSE)
+  #groupComparisonPlots(data = DDA2009.comparisons$ComparisonResult, type = 'Heatmap',
+  #                     address=FALSE)
+  
+  write.csv(DDA2009.comparisons$ComparisonResult, file="MSstats_output.csv")
+  
+  #! /usr/bin/python
+  #conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
+  
+  #! Note that the path also needs to be set in the python file (must be corresponding)
+  py_run_file('../shiny-app/app/MSstatas to pheatmap.py')
+  
+  heatmap <- read.csv('./pheatmap_input.csv', row.names = 1)
+  pheatmap(heatmap)
 }
 
 
