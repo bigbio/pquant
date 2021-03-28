@@ -2,6 +2,8 @@ library(shiny)
 library(shinydashboard)
 library(DT)
 library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
+library(reticulate)
+library(pheatmap)
 
 # Source getPlots functions
 source("app/getPlots.R")
