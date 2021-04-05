@@ -28,7 +28,7 @@ def MS_change_pht(MS):
 if __name__ == '__main__':
 
     # TODO This code implements data processing
-    now_dir = r'tmp'   # Your own work path
+    now_dir = r'D:\dataset\R downstream analysis\shiny\shiny-app'   # Your own work path
     MS_ouput = now_dir + '\\' + 'MSstats_output.csv'
 
     df_MS = pd.read_csv(MS_ouput)

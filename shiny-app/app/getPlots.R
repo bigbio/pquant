@@ -3,7 +3,7 @@
 #setwd(getwd())  # The path where you store this R script
 #setwd('./output') # Store the output plots
 
-getPlot <- function(fileData, flag){
+getPlot <- function(fileData, flag, selector){
 #default option
 DDA2009.proposed <- dataProcess(raw = fileData,
                                 normalization = 'equalizeMedians',
@@ -17,7 +17,7 @@ DDA2009.proposed <- dataProcess(raw = fileData,
 # change the upper limit of y-axis=35
 # set up the size of pdf
 if (flag == 'qc'){
-  dataProcessPlots(data = DDA2009.proposed, type="QCplot",which.Protein=1,
+  dataProcessPlots(data = DDA2009.proposed, type="QCplot",which.Protein=selector,
                  ylimDown=0, ylimUp=35,width=5, height=5, address=FALSE)
 }
 
@@ -27,7 +27,7 @@ DDA2009.TMP <- dataProcess(raw = fileData,
                            censoredInt = NULL, MBimpute=FALSE)
 
 
-# 自动创建MSstats里那个手动创建的矩阵，用户手册p23
+# Automatically create the manually created matrix in MSstats, user manual p23
 len <- length(levels(DDA2009.TMP$ProcessedData$GROUP_ORIGINAL))
 
 ourMatrix <- matrix(c(0:0),nrow=len,ncol=len)
@@ -47,7 +47,7 @@ for(i in 1:len2-1){
 name[len2,1] <- sprintf('%s-%s', tmp[1,1], tmp[len2,1])
 
 row.names(ourMatrix) <- name
-#----------创建结束-----------
+#----------End of creation-----------
 
 DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
                                        data = DDA2009.proposed)
@@ -55,7 +55,7 @@ DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
 # volcanoPlots
 if (flag == 'volcano'){
   groupComparisonPlots(data = DDA2009.comparisons$ComparisonResult, type = 'VolcanoPlot',
-                       width=5, height=5, address=FALSE, which.Comparison=1)
+                       width=5, height=5, address=FALSE, which.Comparison=selector)
 }
 
 # Heatmaps
