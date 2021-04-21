@@ -1,7 +1,5 @@
 #! /usr/bin/R
 
-#setwd(getwd())  # The path where you store this R script
-#setwd('./output') # Store the output plots
 
 getPlot <- function(fileData, flag, selector){
 #default option
@@ -69,7 +67,8 @@ if (flag == 'heat'){
   #conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
   
   #! Note that the path also needs to be set in the python file (must be corresponding)
-  py_run_file('../shiny-app/app/MSstatas to pheatmap.py')
+  now_path = getwd()
+  py_run_file('./app/MSstatas to pheatmap.py')
   
   heatmap <- read.csv('./pheatmap_input.csv', row.names = 1)
   pheatmap(heatmap)

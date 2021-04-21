@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 def MS_change_pht(MS):
     MS = MS[~MS['log2FC'].isin(['Inf'])]  # By ~ inverse;Without the outermost log2FC[], the output would be True/False
@@ -28,7 +29,7 @@ def MS_change_pht(MS):
 if __name__ == '__main__':
 
     # TODO This code implements data processing
-    now_dir = r'D:\dataset\R downstream analysis\shiny\shiny-app'   # Your own work path
+    now_dir = os.getcwd()   # Your own work path
     MS_ouput = now_dir + '\\' + 'MSstats_output.csv'
 
     df_MS = pd.read_csv(MS_ouput)
