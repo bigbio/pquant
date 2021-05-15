@@ -9,11 +9,16 @@ library(shinyjs)
 library(shinyWidgets)
 library(proteus)
 library(ggplot2)
+library(XML)
+library(xml2)
+
 
 # Source getPlots functions
 source("app/getPlots.R")
 source("app/getSelector.R")
+source("app/get_analytics.R")
 
+setwd(getwd())
 
 ui <- dashboardPage(
     dashboardHeader(title = "pQuantR"),
@@ -36,8 +41,6 @@ ui <- dashboardPage(
         
         # default method sidebar
         conditionalPanel(condition = "input.main_tabs == 'default_method_condition'",
-                         h5('Note: Default method uses MSstats'),
-                         h5('and pheatmap.'),
                          br(),
                          sidebarMenu(
                                 # volcano sidebar
@@ -91,6 +94,7 @@ ui <- dashboardPage(
         
         # proteus method sidebar
         conditionalPanel(condition = "input.main_tabs == 'proteus_condition'",
+                         br(),
                          sidebarMenu(
                               menuItem("Data handling",
                                     helpText('Click to convert \'out.csv\' to a'),
@@ -182,7 +186,25 @@ ui <- dashboardPage(
                             #          ),
                             #          br())
                              )
+        ),
+        
+        
+        # expression table sidebar
+        conditionalPanel(condition = "input.main_tabs == 'expression table_condition'",
+                         br(),
+                         sidebarMenu(
+                              br(),
+                              helpText('Expression table contains the'),
+                              helpText('analytics.tsv and configuration.xml.'),
+                              br(),
+                              actionButton(inputId = "expression_table_Render",
+                                           label = "Render Expression Table",
+                                           icon = icon("play-circle"),
+                                           style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                              ),
+                              br()
                          )
+        )
 ),
   
     
@@ -204,7 +226,7 @@ ui <- dashboardPage(
 
             
             # default method condition tab
-            tabPanel(title = 'Default method',
+            tabPanel(title = 'MSstats method',
                      value = 'default_method_condition',
                      
                      fluidPage(
@@ -270,10 +292,25 @@ ui <- dashboardPage(
                                     
                               )
                          )
+              ),
+            
+            # expression table condition tab
+            tabPanel(title = 'Expression table',
+                     value = 'expression table_condition',
+                     fluidPage(
+                           fluidRow(
+                             column(width = 6,
+                                    verbatimTextOutput("expression_table_configuration")),
+                             
+                             column(width = 6,
+                                    DT::DTOutput("expression_table_analytics"))
+                           )
                      )
             )
-            
+                     
         )
+            
+    )
 )
 
 
@@ -625,6 +662,55 @@ server <- function(input, output, session) {
     # --------------Download---------------
     # default--------------
     # volcano
+    
+    
+    
+    
+    ##### expression table
+
+    expression_table_configuration_activate <- reactive({
+      if(input$expression_table_Render == 0) {
+        return(NULL)
+      }
+      else {
+        #! Note that the path also needs to be set in the python file (must be corresponding)
+        py_run_file('./app/generate_configuration_xml.py')
+        configuration_data <- readLines('../data/NAME_configuration.xml')
+        cat(configuration_data, sep = '\n')
+
+        
+      }
+    })
+    
+    
+    output$expression_table_configuration <- renderPrint({
+      
+      expression_table_configuration_activate()
+
+    })
+    
+    
+    
+    expression_table_analytics_activate <- reactive({
+      if(input$expression_table_Render == 0) {
+        return(NULL)
+      }
+      else {
+        getAnalytics(inputdf())
+        datatable(analyticsData <- read.csv('../data/NAME_analytics.csv'),
+                  options = list(scrollX = TRUE)
+        )
+      }
+    })
+    
+    
+    output$expression_table_analytics <- renderDT({
+      
+      expression_table_analytics_activate()
+      
+    })
+    
+    
 
     
 }
