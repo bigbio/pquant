@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+	<Configuration experimentType="rnaseq_mrna_differential" r_data="0">
+		<analytics>
+			<assay_groups>
+				<assay_group id="g1" label="non-small cell lung cancer; A549">
+					<assay>Sample 1</assay>
+					<assay>Sample 1</assay>
+					<assay>Sample 1</assay>
+				</assay_group>
+				<assay_group id="g2" label="non-small cell lung cancer; H197">
+					<assay>Sample 2</assay>
+					<assay>Sample 2</assay>
+					<assay>Sample 2</assay>
+				</assay_group>
+				<assay_group id="g3" label="small cell lung cancer; H446">
+					<assay>Sample 3</assay>
+					<assay>Sample 3</assay>
+					<assay>Sample 3</assay>
+				</assay_group>
+				<assay_group id="g4" label="small cell lung cancer; H69">
+					<assay>Sample 4</assay>
+					<assay>Sample 4</assay>
+					<assay>Sample 4</assay>
+				</assay_group>
+			</assay_groups>
+			<contrasts>
+				<contrast cttv_primary="1" id="g2_g1">
+					<name>'A549' vs 'H69' in 'non-small cell lung cancer'</name>
+					<reference_assay_group>g2</reference_assay_group>
+					<test_assay_group>g1</test_assay_group>
+				</contrast>
+				<contrast cttv_primary="1" id="g4_g3">
+					<name>'H446' vs 'H197' in 'small cell lung cancer'</name>
+					<reference_assay_group>g4</reference_assay_group>
+					<test_assay_group>g3</test_assay_group>
+				</contrast>
+			</contrasts>
+		</analytics>
+	</Configuration>
