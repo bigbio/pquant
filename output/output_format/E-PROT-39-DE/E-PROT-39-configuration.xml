@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<configuration experimentType="rnaseq_mrna_differential" r_data="0">
+<configuration experimentType="proteomics_lfq" r_data="0">
     <analytics>
         <assay_groups>
             <assay_group id="g1" label="octogenarian age bracket; Alzheimer's disease">

@@ -13,3 +13,7 @@ $>  triqler out_triqler.tsv --decoy_pattern DECOY_ --min_samples 2 --fold_change
 - `--min_samples`: Min number of samples a peptide should be quantified. If this number is increased the quality of the results will be high.
 - `--fold_change_eval`: log2 fold change evaluation threshold. (default: 1.0)
 
+Discussion about the Triqler parameters can be found in issue [#19](https://github.com/bigbio/pquant/issues/19)
+
+
+

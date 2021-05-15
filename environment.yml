@@ -14,3 +14,4 @@ dependencies:
   - conda-forge::r-ggplot2
   - conda-forge::pandas
   - conda-forge::numpy
+  - conda-forge::click
