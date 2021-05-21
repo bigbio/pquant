@@ -96,7 +96,7 @@ def get_mztab(pri_mztab, data_dir):
         index = range(len(tmp_pep))
     )
 
-    tmp.to_csv(data_dir + 'pep.csv', index=False)
+    tmp.to_csv(data_dir + '\\pep.csv', index=False)
 
     return ''
 
@@ -108,14 +108,14 @@ if __name__ == "__main__":
     
     # TODO These code implements data processing
     now_dir = os.getcwd()
-    #now_dir = 'D:\\dataset\\R downstream analysis\\shiny\\shiny-app\\app\\'
-    data_dir = 'D:\\dataset\\R downstream analysis\\shiny\\data\\' # change to the path where you put data
-    csv = data_dir  + "out.csv"
-    pri_mztab = data_dir  + "out_mzTab.csv"
+    data_dir = now_dir
+
+    csv = data_dir  + "\\out_msstats.csv"
+    pri_mztab = data_dir  + "\\out_mzTab.csv"
 
     get_mztab(pri_mztab, data_dir)
 
-    mztab = data_dir + "pep.csv"
+    mztab = data_dir + "\\pep.csv"
     
     df_csv = pd.read_csv(csv)
     df_mztab = pd.read_csv(mztab)
@@ -143,11 +143,11 @@ if __name__ == "__main__":
         #"reverse": [],
         #"contaminant": [],
         "intensity": evi_intensity})
-    evidence.to_csv(data_dir + "result_1.csv")
+    evidence.to_csv(data_dir + "\\result_1.csv")
     
     # TODO：The following code implements the VLOOKUP function operation
-    data_text = data_dir + "result_1.csv"
-    pep_text = data_dir + "pep.csv"
+    data_text = data_dir + "\\result_1.csv"
+    pep_text = data_dir + "\\pep.csv"
     pep = pd.read_csv(pep_text)
     df = pd.read_csv(data_text)
     data = df["PeptideSequence"]
@@ -162,4 +162,4 @@ if __name__ == "__main__":
         df_merge = tmp
         #print(df_merge)
 
-    df_merge.to_csv(data_dir + "out_proteus.csv", index=False)
+    df_merge.to_csv(data_dir + "\\out_proteus.csv", index=False)

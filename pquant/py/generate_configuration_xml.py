@@ -84,7 +84,7 @@ def get_data(disease, information, data_dir):
     gg = g_name + g_id
     gg = ','.join(gg)
 
-    f = open(data_dir + 'g_g_name.txt', 'w')
+    f = open(data_dir + '\\g_g_name.txt', 'w')
     f.write(gg)
     f.close()
 
@@ -143,7 +143,7 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
         node_contrast.appendChild(node_c_test)
 
 
-    fp = open(data_dir + 'NAME_configuration.xml', 'w')
+    fp = open(data_dir + '\\NAME_configuration.xml', 'w')
     doc.writexml(fp, indent='\t', addindent='\t', newl='\n', encoding="utf-8")
     fp.close()
 
@@ -154,9 +154,9 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
 
 if __name__ == "__main__":
     
-    data_dir = 'D:\\dataset\\R downstream analysis\\shiny\\data\\' # change to the path where you put data
-    #data_dir = os.getcwd()
-    csv = data_dir  + "PXD015270-cell-lines.sdrf.csv"
+    now_dir = os.getcwd()
+    data_dir = now_dir
+    csv = data_dir  + "\\sdrf.csv"
     df_csv = pd.read_csv(csv)
 
     disease = df_csv['characteristics[disease]']

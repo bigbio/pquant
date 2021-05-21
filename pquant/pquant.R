@@ -1,8 +1,16 @@
-#! /usr/bin/R
+library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
+library(reticulate)
 
 
-getPlot <- function(fileData, flag, selector){
-#default option
+setwd('D:/dataset/R downstream analysis/pquant/data')
+
+
+out_msstats <- read.csv('out_msstats.csv')
+out_mzTab <- read.csv('out_mzTab.csv')
+sdrf <- read.csv('sdrf.csv')
+
+
+fileData <- out_msstats
 DDA2009.proposed <- dataProcess(raw = fileData,
                                 normalization = 'equalizeMedians',
                                 summaryMethod = 'TMP',
@@ -11,13 +19,6 @@ DDA2009.proposed <- dataProcess(raw = fileData,
                                 MBimpute = TRUE,
                                 maxQuantileforCensored=0.999)
 
-# use type="QCplot" with all proteins
-# change the upper limit of y-axis=35
-# set up the size of pdf
-if (flag == 'qc'){
-  dataProcessPlots(data = DDA2009.proposed, type="QCplot",which.Protein=selector,
-                 ylimDown=0, ylimUp=35,width=5, height=5, address=FALSE)
-}
 
 DDA2009.TMP <- dataProcess(raw = fileData,
                            normalization = 'equalizeMedians',
@@ -50,29 +51,35 @@ row.names(ourMatrix) <- name
 DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
                                        data = DDA2009.proposed)
 
-# volcanoPlots
-if (flag == 'volcano'){
-  groupComparisonPlots(data = DDA2009.comparisons$ComparisonResult, type = 'VolcanoPlot',
-                       width=5, height=5, address=FALSE, which.Comparison=selector)
-}
 
-# Heatmaps
-if (flag == 'heat'){
-  #groupComparisonPlots(data = DDA2009.comparisons$ComparisonResult, type = 'Heatmap',
-  #                     address=FALSE)
-  
-  write.csv(DDA2009.comparisons$ComparisonResult, file="MSstats_output.csv")
-  
-  #! /usr/bin/python
-  #conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
-  
-  #! Note that the path also needs to be set in the python file (must be corresponding)
-  now_path = getwd()
-  py_run_file('./app/MSstatas to pheatmap.py')
-  
-  heatmap <- read.csv('./pheatmap_input.csv', row.names = 1)
-  pheatmap(heatmap)
-}
+write.csv(DDA2009.comparisons$ComparisonResult, file="MSstats_output.csv")
 
 
-}
+#! /usr/bin/python
+#conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
+
+py_run_file('../py/MSstatas to pheatmap.py')
+
+py_run_file('../py/get_proteus_evidence.py')
+
+proteus_evidence_file <- read.csv('out_proteus.csv', row.names = NULL)
+# Prevent the occurrence of ''(null value)
+#pep2prot <- data.frame(sequence = proteus_evidence_file$sequence, protein = proteus_evidence_file$protein)
+#pep2prot <- unique(pep2prot)
+#pep2prot[pep2prot == ''] <- NA
+#na.omit(pep2prot)
+#write.csv(pep2prot, 'out_proteus_pep2prot.csv')
+proteus_evidence_file <- unique(proteus_evidence_file)
+proteus_evidence_file[proteus_evidence_file == ''] <- NA
+proteus_evidence_file <- na.omit(proteus_evidence_file)
+write.csv(proteus_evidence_file, 'out_proteus.csv', row.names = F)
+
+
+py_run_file('../py/generate_configuration_xml.py')
+
+
+setwd('D:/dataset/R downstream analysis/pquant/')
+source("shiny-app/app.R")
+
+pquant_shiny(DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
+
