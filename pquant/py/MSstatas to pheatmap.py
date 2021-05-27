@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # TODO This code implements data processing
     now_dir = os.getcwd()   # Your own work path
     #now_dir = 'D:\\dataset\\R downstream analysis\\pquant\\data\\'
-    MS_ouput = now_dir + '\\MSstats_output.csv'
+    MS_ouput = now_dir + '/MSstats_output.csv'
 
     df_MS = pd.read_csv(MS_ouput)
     
@@ -58,4 +58,4 @@ if __name__ == '__main__':
 
     pHT = MS_change_pht(df_MS)   
 
-    pHT.to_csv(now_dir + '\\pheatmap_input.csv', index=False)
+    pHT.to_csv(now_dir + '/pheatmap_input.csv', index=False)
