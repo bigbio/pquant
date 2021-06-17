@@ -34,8 +34,8 @@ for(i in 1:(length(name_data)/2)){
   if (any(is.na(data))) {
       num = 1
       
-      name_p = paste(name_data[,i+4], '.p-value', sep = '')
-      name_log2fc = paste(name_data[,i+4], '.log2foldchange', sep = '')
+      name_p = paste(name_data[,i+length(name_data)/2], '.p-value', sep = '')
+      name_log2fc = paste(name_data[,i+length(name_data)/2], '.log2foldchange', sep = '')
       
       matrix_tmp = data.frame(pp = data$pvalue, llog2 = data$log2FC)
       colnames(matrix_tmp)[1] <- name_p
