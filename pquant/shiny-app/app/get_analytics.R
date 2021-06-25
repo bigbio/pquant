@@ -7,11 +7,11 @@ getAnalytics <- function(data, DDA2009.proposed, DDA2009.TMP, DDA2009.comparison
 ####
 #data = DDA2009.comparisons$ComparisonResult
 
-name_data <- read.table('data/g_g_name.txt', sep = ',')
+name_data <- read.table('./g_g_name.txt', sep = ',')
 
 
 for(i in 1:(length(name_data)/2)){
-  data <- read.csv("data/MSstats_output.csv")
+  data <- read.csv("./MSstats_output.csv")
   
   temp.name = name_data[,i]
   data <- data[which(data$Label %in% temp.name), ]
@@ -26,7 +26,7 @@ for(i in 1:(length(name_data)/2)){
 
 
 for(i in 1:(length(name_data)/2)){
-  data <- read.csv("data/MSstats_output.csv")
+  data <- read.csv("./MSstats_output.csv")
   
   temp.name = name_data[,i]
   data <- data[which(data$Label %in% temp.name), ]
@@ -52,7 +52,7 @@ for(i in 1:(length(name_data)/2)){
 ### Delete lines containing 'NA'
 matrix_final = na.omit(matrix_final)
 
-write.csv(matrix_final, file = 'data/NAME_analytics.csv', quote = F, row.names = F)
+write.csv(matrix_final, file = './NAME_analytics.csv', quote = F, row.names = F)
 
 }
 

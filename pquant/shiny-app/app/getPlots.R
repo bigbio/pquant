@@ -19,7 +19,7 @@ if (flag == 'volcano'){
 
 # Heatmaps
 if (flag == 'heat'){
-  heatmap <- read.csv('data/pheatmap_input.csv', row.names = 1)
+  heatmap <- read.csv('./pheatmap_input.csv', row.names = 1)
   
   if (nrow(heatmap) > 50) {pheatmap(heatmap, show_rownames = F)}
   else {pheatmap(heatmap)}
