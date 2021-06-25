@@ -14,9 +14,9 @@ library(xml2)
 
 
 # Source getPlots functions
-source("shiny-app/app/getPlots.R")
-source("shiny-app/app/getSelector.R")
-source("shiny-app/app/get_analytics.R")
+source("../shiny-app/app/getPlots.R")
+source("../shiny-app/app/getSelector.R")
+source("../shiny-app/app/get_analytics.R")
 
 setwd(getwd())
 
@@ -315,7 +315,7 @@ ui <- dashboardPage(
 
 # Define server logic ----
 server <- function(input, output, session) {
-    options(shiny.maxRequestSize=60*1024^2)
+    options(shiny.maxRequestSize=500*1024^2)
     
 
     # -------------input---------------
@@ -421,7 +421,7 @@ server <- function(input, output, session) {
     #### ------------Proteus-------------
     
     output$proteus_annotation_example <- renderImage({
-      list(src = './shiny-app/www/annotation_example.png',
+      list(src = '../shiny-app/www/annotation_example.png',
            width = '100%')
     }, deleteFile = FALSE)
     
@@ -454,7 +454,7 @@ server <- function(input, output, session) {
         return(NULL)
       }
       else {
-        proteus_evidence_file <- read.csv('data/out_proteus.csv', row.names = NULL)
+        proteus_evidence_file <- read.csv('./out_proteus.csv', row.names = NULL)
         }
     })
 
@@ -467,7 +467,7 @@ server <- function(input, output, session) {
     
     ### annotate metadata for user
     categorial_anno <- reactive({
-      proteus_data <- read.csv('data/out_proteus.csv', row.names = NULL)
+      proteus_data <- read.csv('./out_proteus.csv', row.names = NULL)
       proteus_experiment <- unique(proteus_data$experiment)
       proteus_intensity <- rep('Intensity', times = length(proteus_experiment))
       proteus_null <- rep('NULL', times = length(proteus_experiment))
@@ -532,7 +532,7 @@ server <- function(input, output, session) {
     # Proteus: create a peptide & protein dataset
     proteus_method_proteus_prodat <- reactive({
       if (dataControl$annoSubmit > 0) {
-        evi <- read.csv('data/out_proteus.csv', row.names = NULL)
+        evi <- read.csv('./out_proteus.csv', row.names = NULL)
         meta <- proteus_metadata()
         proteus_pepdat <- makePeptideTable(evi, meta, ncores = 1)
         proteus_prodat <- makeProteinTable(proteus_pepdat, ncores = 1)
@@ -678,7 +678,7 @@ server <- function(input, output, session) {
         return(NULL)
       }
       else {
-        configuration_data <- readLines('data/NAME_configuration.xml')
+        configuration_data <- readLines('./NAME_configuration.xml')
         cat(configuration_data, sep = '\n')
       }
     })
@@ -698,7 +698,7 @@ server <- function(input, output, session) {
       }
       else {
         getAnalytics(inputdf(), DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
-        datatable(analyticsData <- read.csv('data/NAME_analytics.csv'),
+        datatable(analyticsData <- read.csv('./NAME_analytics.csv'),
                   options = list(scrollX = TRUE)
         )
       }
