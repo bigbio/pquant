@@ -33,7 +33,7 @@ def get_data(disease, information, data_dir):
                 assay_id.append(aid)
                 g += 1
 
-                assay.append(list(atmp['Source Name']))
+                assay.append(list(atmp['source name']))
 
                 if g % 2 == 0:
                     cid = 'g' + str(g) + '_g' + str(g-1)
@@ -65,7 +65,7 @@ def get_data(disease, information, data_dir):
                 assay_id.append(aid)
                 g += 1
                 
-                assay.append(list(atmp['Source Name']))
+                assay.append(list(atmp['source name']))
 
                 if g % 2 == 0:
                     cid = 'g' + str(g) + '_g' + str(g-1)
@@ -155,9 +155,14 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
 if __name__ == "__main__":
     
     now_dir = os.getcwd()
+    #now_dir = 'D:/dataset/R downstream analysis/pquant/data'
     data_dir = now_dir
     csv = data_dir  + "/sdrf.csv"
     df_csv = pd.read_csv(csv)
+
+    rownames = list(df_csv.columns)
+    low_rownames = [i.lower() for i in rownames]
+    df_csv.columns = low_rownames
 
     disease = df_csv['characteristics[disease]']
     information = df_csv.iloc[:,-1]  # you can change the column names that need to be compared
