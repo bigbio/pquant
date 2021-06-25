@@ -2,6 +2,17 @@ import os
 import pandas as pd
 import xml.dom.minidom
 
+
+def get_sdrfName(data_dir, sdrfType):
+    path = data_dir
+    flag = 1
+    for root,dirs,files in os.walk(path):
+        for i in files:
+            if sdrfType in i:
+                sdrfName = i
+                return sdrfName
+
+
 def get_data(disease, information, data_dir):
 
     len_d = len(disease)
@@ -155,10 +166,14 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
 if __name__ == "__main__":
     
     now_dir = os.getcwd()
-    #now_dir = 'D:/dataset/R downstream analysis/pquant/data'
+    now_dir = 'D:/dataset/R downstream analysis/pquant/data'
     data_dir = now_dir
-    csv = data_dir  + "/sdrf.csv"
-    df_csv = pd.read_csv(csv)
+
+    sdrfType = '.tsv'
+    sdrfName = get_sdrfName(data_dir, sdrfType)
+    csv = data_dir  + "/" + sdrfName
+    df_csv = pd.read_csv(csv, sep='\t')
+    print(df_csv)
 
     rownames = list(df_csv.columns)
     low_rownames = [i.lower() for i in rownames]
