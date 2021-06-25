@@ -1,8 +1,9 @@
 library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
 library(reticulate)
 
-setwd('D:/dataset/R downstream analysis/pquant/data')
-
+### get a "/pquant/data" path
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd("./data/")
 fileData <- read.csv('out_msstats.csv')
 
 DDA2009.proposed <- dataProcess(raw = fileData,
@@ -46,9 +47,6 @@ DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
                                        data = DDA2009.proposed)
 
 save(DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons, file = "preShiny.RData")
-
-
-#load("preShiny.RData")
 
 write.csv(DDA2009.comparisons$ComparisonResult, file="MSstats_output.csv")
 
