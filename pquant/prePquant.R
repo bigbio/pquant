@@ -1,4 +1,4 @@
-library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
+library(MSstats)
 library(reticulate)
 
 ### get a "/pquant/data" path
@@ -6,23 +6,22 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd("./data/")
 fileData <- read.csv('out_msstats.csv')
 
-DDA2009.proposed <- dataProcess(raw = fileData,
-                                normalization = 'equalizeMedians',
-                                summaryMethod = 'TMP',
-                                censoredInt = "NA",
-                                cutoffCensored = "minFeature",
-                                MBimpute = TRUE,
-                                maxQuantileforCensored=0.999)
+DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
+                                         normalization = 'equalizeMedians',
+                                         summaryMethod = 'TMP',
+                                         censoredInt = "NA",
+                                         MBimpute = TRUE)
 
 
-DDA2009.TMP <- dataProcess(raw = fileData,
-                           normalization = 'equalizeMedians',
-                           summaryMethod = 'TMP',
-                           censoredInt = NULL, MBimpute=FALSE)
+DDA2009.TMP <- MSstats::dataProcess(raw = fileData,
+                                    normalization = 'equalizeMedians',
+                                    summaryMethod = 'TMP',
+                                    censoredInt = NULL,
+                                    MBimpute=FALSE)
 
 
 # Automatically create the manually created matrix in MSstats, user manual p23
-len <- length(levels(DDA2009.TMP$ProcessedData$GROUP_ORIGINAL))
+len <- length(levels(DDA2009.TMP$FeatureLevelData$GROUP))
 
 ourMatrix <- matrix(c(0:0),nrow=len,ncol=len)
 diag(ourMatrix) = -1
@@ -31,7 +30,7 @@ for(i in 1:len-1){
 }
 ourMatrix[len,1] = 1
 
-ourCondition <- unique(fileData$Condition)
+ourCondition <- levels(DDA2009.TMP$ProteinLevelData$GROUP)
 len2 <- length(ourCondition)
 tmp <- matrix(ourCondition, nr=len2, nc=1)
 name <- matrix(nr=len2, nc=1)
@@ -42,6 +41,7 @@ name[len2,1] <- sprintf('%s-%s', tmp[1,1], tmp[len2,1])
 
 row.names(ourMatrix) <- name
 #----------End of creation-----------
+colnames(ourMatrix) <- ourCondition
 
 DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
                                        data = DDA2009.proposed)

@@ -3,15 +3,13 @@ import pandas as pd
 import os
 
 def MS_change_pht(MS):
-    
-    #MS = MS[~MS['log2FC'].isin(['Inf'])]  # By ~ inverse;Without the outermost log2FC[], the output would be True/False
-    #MS = MS[~MS['log2FC'].isin(['-Inf'])]
 
     MS = MS[~MS['log2FC'].isin([np.inf])]  # By ~ inverse;Without the outermost log2FC[], the output would be True/False
     MS = MS[~MS['log2FC'].isin([-np.inf])]
 
     Protein = MS['Protein'].drop_duplicates().tolist()
     Label = MS['Label'].drop_duplicates().tolist()
+    Label = Label[~pd.isnull(Label)].tolist()
 
     pHT_Protein = []
     pHT_log2FC = []
