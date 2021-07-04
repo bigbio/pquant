@@ -7,7 +7,7 @@ getSelector <- function(fileData, flag, DDA2009.proposed, DDA2009.TMP){
   
   else {
       # Automatically create the manually created matrix in MSstats, user manual p23
-      len <- length(levels(DDA2009.TMP$ProcessedData$GROUP_ORIGINAL))
+      len <- length(levels(DDA2009.TMP$FeatureLevelData$GROUP))
       
       ourMatrix <- matrix(c(0:0),nrow=len,ncol=len)
       diag(ourMatrix) = -1
@@ -16,7 +16,7 @@ getSelector <- function(fileData, flag, DDA2009.proposed, DDA2009.TMP){
       }
       ourMatrix[len,1] = 1
       
-      ourCondition <- unique(fileData$Condition)
+      ourCondition <- levels(DDA2009.TMP$ProteinLevelData$GROUP)
       len2 <- length(ourCondition)
       tmp <- matrix(ourCondition, nr=len2, nc=1)
       name <- matrix(nr=len2, nc=1)
