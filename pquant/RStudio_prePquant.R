@@ -4,6 +4,7 @@ library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
 library(reticulate)  
 
   
+# If run dataProcess() occuring an error message, please change "summaryMethod = 'TMP'" to "summaryMethod = 'linear'"  
 DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
                                            normalization = 'equalizeMedians',
                                            summaryMethod = 'TMP',
