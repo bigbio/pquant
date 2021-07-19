@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 import os
+from pyteomics import mztab
 
 
 def function(sequence, reference, evi_protein_group):
@@ -85,18 +86,13 @@ def function(sequence, reference, evi_protein_group):
 
 
 def get_mztab(pri_mztab, data_dir):
-    df_pri = pd.read_csv(pri_mztab)
+    #df_pri = pd.read_csv(pri_mztab)
+    out_mzTab_path = pri_mztab
+    mztab_data = mztab.MzTab(out_mzTab_path)
+    pep_table = mztab_data.peptide_table
+    df_pri = pep_table
 
-    tmp_peh = (df_pri[df_pri['MTD'].isin(['PEH'])].values)[0]
-    tmp_pep = df_pri[df_pri['MTD'].isin(['PEP'])].values
-
-    tmp = pd.DataFrame(
-        data = tmp_pep,
-        columns = tmp_peh,
-        index = range(len(tmp_pep))
-    )
-
-    tmp.to_csv(data_dir + 'pep.csv', index=False)
+    df_pri.to_csv(data_dir + '/pep.csv', index=False)
 
     return ''
 
@@ -108,14 +104,16 @@ if __name__ == "__main__":
     
     # TODO These code implements data processing
     now_dir = os.getcwd()
-    #now_dir = 'D:\\dataset\\R downstream analysis\\shiny\\shiny-app\\app\\'
-    data_dir = 'D:\\dataset\\R downstream analysis\\shiny\\data\\' # change to the path where you put data
-    csv = data_dir  + "out.csv"
-    pri_mztab = data_dir  + "out_mzTab.csv"
+    #now_dir = 'D:/dataset/R downstream analysis/pquant/data'
+    data_dir = now_dir
+
+    csv = data_dir  + "/out_msstats.csv"
+    #pri_mztab = data_dir  + "/out_mzTab.csv"
+    pri_mztab = data_dir  + "/out.mzTab"
 
     get_mztab(pri_mztab, data_dir)
 
-    mztab = data_dir + "pep.csv"
+    mztab = data_dir + "/pep.csv"
     
     df_csv = pd.read_csv(csv)
     df_mztab = pd.read_csv(mztab)
@@ -143,11 +141,11 @@ if __name__ == "__main__":
         #"reverse": [],
         #"contaminant": [],
         "intensity": evi_intensity})
-    evidence.to_csv(data_dir + "result_1.csv")
+    evidence.to_csv(data_dir + "/result_1.csv")
     
     # TODO：The following code implements the VLOOKUP function operation
-    data_text = data_dir + "result_1.csv"
-    pep_text = data_dir + "pep.csv"
+    data_text = data_dir + "/result_1.csv"
+    pep_text = data_dir + "/pep.csv"
     pep = pd.read_csv(pep_text)
     df = pd.read_csv(data_text)
     data = df["PeptideSequence"]
@@ -162,4 +160,4 @@ if __name__ == "__main__":
         df_merge = tmp
         #print(df_merge)
 
-    df_merge.to_csv(data_dir + "out_proteus.csv", index=False)
+    df_merge.to_csv(data_dir + "/out_proteus.csv", index=False)

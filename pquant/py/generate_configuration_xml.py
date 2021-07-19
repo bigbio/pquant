@@ -2,6 +2,17 @@ import os
 import pandas as pd
 import xml.dom.minidom
 
+
+def get_sdrfName(data_dir, sdrfType):
+    path = data_dir
+    flag = 1
+    for root,dirs,files in os.walk(path):
+        for i in files:
+            if sdrfType in i:
+                sdrfName = i
+                return sdrfName
+
+
 def get_data(disease, information, data_dir):
 
     len_d = len(disease)
@@ -33,7 +44,7 @@ def get_data(disease, information, data_dir):
                 assay_id.append(aid)
                 g += 1
 
-                assay.append(list(atmp['Source Name']))
+                assay.append(list(atmp['source name']))
 
                 if g % 2 == 0:
                     cid = 'g' + str(g) + '_g' + str(g-1)
@@ -65,7 +76,7 @@ def get_data(disease, information, data_dir):
                 assay_id.append(aid)
                 g += 1
                 
-                assay.append(list(atmp['Source Name']))
+                assay.append(list(atmp['source name']))
 
                 if g % 2 == 0:
                     cid = 'g' + str(g) + '_g' + str(g-1)
@@ -84,7 +95,7 @@ def get_data(disease, information, data_dir):
     gg = g_name + g_id
     gg = ','.join(gg)
 
-    f = open(data_dir + 'g_g_name.txt', 'w')
+    f = open(data_dir + '/g_g_name.txt', 'w')
     f.write(gg)
     f.close()
 
@@ -143,7 +154,7 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
         node_contrast.appendChild(node_c_test)
 
 
-    fp = open(data_dir + 'NAME_configuration.xml', 'w')
+    fp = open(data_dir + '/NAME_configuration.xml', 'w')
     doc.writexml(fp, indent='\t', addindent='\t', newl='\n', encoding="utf-8")
     fp.close()
 
@@ -154,10 +165,19 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
 
 if __name__ == "__main__":
     
-    data_dir = 'D:\\dataset\\R downstream analysis\\shiny\\data\\' # change to the path where you put data
-    #data_dir = os.getcwd()
-    csv = data_dir  + "PXD015270-cell-lines.sdrf.csv"
-    df_csv = pd.read_csv(csv)
+    now_dir = os.getcwd()
+    now_dir = 'D:/dataset/R downstream analysis/pquant/data'
+    data_dir = now_dir
+
+    sdrfType = '.tsv'
+    sdrfName = get_sdrfName(data_dir, sdrfType)
+    csv = data_dir  + "/" + sdrfName
+    df_csv = pd.read_csv(csv, sep='\t')
+    print(df_csv)
+
+    rownames = list(df_csv.columns)
+    low_rownames = [i.lower() for i in rownames]
+    df_csv.columns = low_rownames
 
     disease = df_csv['characteristics[disease]']
     information = df_csv.iloc[:,-1]  # you can change the column names that need to be compared

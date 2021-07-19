@@ -28,16 +28,12 @@ $> source build.sh
 ## Shiny application
 
 1. Preparing  for shiny app.<br>
-* Download `ups1-uniprot-comet-proteomics_lfq.zip` from [this page](https://github.com/bigbio/pquant/issues/7), we need `out_msstats.csv` in this zip.<br>
-* Download `shiny-app` folder from [this page](https://github.com/Douerww/pquantR/tree/main/shiny-app) and put it in a suitable working path.
-2. Run `app.R` in the shiny-app folder, and you could run it in the following ways.<br>
-* Use RStudio to open app.R file, and click the `Run App` button.<br>
-* Or enter the following command in RStudio to run the shiny app:<br>
-```r
-setwd(getwd())  # The path where you store this R script
-shiny::runApp('./shiny-app')
-```
-3. Click the `Browse` button to upload ‘out. CSV ‘file, then you can view the contents of the file, the resulting volcano map, heat map, and QC map through four different buttons in the shiny app. And you could use MSstats method or proteus method.<br>
+* Download `sdrf.csv` from [this page](https://ftp.pride.ebi.ac.uk/pride/data/proteomes/proteogenomics/differential-expression/RPXD015270.1-cell-lines/expdesign/), `out_msstats.csv` and `out.mzTab`from [this page](https://ftp.pride.ebi.ac.uk/pride/data/proteomes/proteogenomics/differential-expression/RPXD015270.1-cell-lines/proteomics_lfq/).<br>
+* Download `pquantR` folder from [this page](https://github.com/Douerww/pquantR/tree/main/pquant) and put it in a suitable working path.
+2. Run `pquant.R` in the folder, and you could run it in the following ways.<br>
+* Use RStudio to open `RStudio_pquant.R` file, and Run.<br>
+   * We could run `prePquant.R` to get `preShiny.RData` to separate data preprocessing function.
+3. Click the `Browse` button to upload ‘out_msstats.csv ‘file, then you can view the contents of the file, the resulting volcano map, heat map, and QC map through four different buttons in the shiny app. And you could use MSstats method or proteus method.<br>
 ![](https://github.com/Douerww/pquantR/blob/main/img/homePage.png)
 ![](https://github.com/Douerww/pquantR/blob/main/img/defaultMethodPage.png)
 ![](https://github.com/Douerww/pquantR/blob/main/img/proteusDataPage.png)

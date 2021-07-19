@@ -14,12 +14,15 @@ library(xml2)
 
 
 # Source getPlots functions
-source("app/getPlots.R")
-source("app/getSelector.R")
-source("app/get_analytics.R")
+source("../shiny-app/app/getPlots.R")
+source("../shiny-app/app/getSelector.R")
+source("../shiny-app/app/get_analytics.R")
 
 setwd(getwd())
 
+
+pquant_shiny <- function(DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons){
+  
 ui <- dashboardPage(
     dashboardHeader(title = "pQuantR"),
     dashboardSidebar(
@@ -31,11 +34,11 @@ ui <- dashboardPage(
                          tags$hr(), 
                          
                          # file selection box
-                         fileInput('csvFile', 'Choose a \'out.csv\' file', multiple = FALSE, 
+                         fileInput('csvFile', 'Choose the same \'out_msstats.csv\'', multiple = FALSE, 
                                    accept=c('text/csv', 'text/comma-separated-values,text/plain')), # CSV text file
                          br(),
                          
-                         helpText('Note: \'.mzTab\' is ... ')
+                         helpText('Note: \'out_msstats.csv\' is ... ')
                          ),
         
         
@@ -47,9 +50,6 @@ ui <- dashboardPage(
                                menuItem("Volcano plot",
                                          #tabName = 'default_method_volcano_show',
                                          br(),
-                                         helpText('Please wait a second until the'),
-                                         helpText('\"Options\" appear, then click'),
-                                         helpText('\"Render Plot\".'),
                                          uiOutput('default_method_volcano_selector'),
                                          br(),
                                          actionButton(inputId = "default_method_volcano_Render",
@@ -76,9 +76,6 @@ ui <- dashboardPage(
                                menuItem("QC plot",
                                          #tabName = 'default_method_qc_show',
                                          br(),
-                                         helpText('Please wait a second until the'),
-                                         helpText('\"Options\" appear, then click'),
-                                         helpText('\"Render Plot\".'),
                                          uiOutput('default_method_qc_selector'),
                                          br(),
                                          actionButton(inputId = "default_method_qc_Render",
@@ -119,7 +116,8 @@ ui <- dashboardPage(
                                       br(), "will be used for stastical",
                                       br(), "comparisons.",
                                       br(),br(), "Example:"),
-                                    img(src = 'annotation_example.png', width = '100%'),
+                                    #img(src = './shiny-app/www/annotation_example.png', width = '100%'),
+                                    imageOutput('proteus_annotation_example'),
                                     div(style = "text-align:center", "once done renaming press",
                                       br(), "\'submit\' to lock in the annotation"),
                                     actionButton(inputId = "submit_anno",
@@ -317,7 +315,7 @@ ui <- dashboardPage(
 
 # Define server logic ----
 server <- function(input, output, session) {
-    options(shiny.maxRequestSize=60*1024^2)
+    options(shiny.maxRequestSize=500*1024^2)
     
 
     # -------------input---------------
@@ -343,7 +341,8 @@ server <- function(input, output, session) {
             return(NULL)
         }
         else {
-            getPlot(inputdf(), flag = 'volcano', selector = input$default_method_volcano_input)
+            getPlot(inputdf(), flag = 'volcano', selector = input$default_method_volcano_input,
+                    DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
         }
     })
     
@@ -352,7 +351,8 @@ server <- function(input, output, session) {
             return(NULL)
         }
         else {
-            default_method_vol_selector <- getSelector(inputdf(), flag = 'volcano')
+            default_method_vol_selector <- getSelector(inputdf(), flag = 'volcano',
+                                                       DDA2009.proposed, DDA2009.TMP)
             selectInput(inputId = 'default_method_volcano_input',
                         label = 'Options',
                         choices = as.list(default_method_vol_selector)
@@ -375,7 +375,7 @@ server <- function(input, output, session) {
             return(NULL)
         }
         else {
-            getPlot(inputdf(), flag = 'heat')
+            getPlot(inputdf(), flag = 'heat', DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
         }
     })
     
@@ -390,7 +390,8 @@ server <- function(input, output, session) {
             return(NULL)
         }
         else {
-            getPlot(inputdf(), flag = 'qc', selector = input$default_method_qc_input)
+            getPlot(inputdf(), flag = 'qc', selector = input$default_method_qc_input,
+                    DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
         }
     })
     
@@ -399,7 +400,8 @@ server <- function(input, output, session) {
             return(NULL)
         }
         else {
-            default_method_qc_selector <- getSelector(inputdf(), flag = 'qc')
+            default_method_qc_selector <- getSelector(inputdf(), flag = 'qc',
+                                                      DDA2009.proposed, DDA2009.TMP)
             selectInput(inputId = 'default_method_qc_input',
                         label = 'Options',
                         choices = as.list(default_method_qc_selector)
@@ -417,6 +419,11 @@ server <- function(input, output, session) {
     
     
     #### ------------Proteus-------------
+    
+    output$proteus_annotation_example <- renderImage({
+      list(src = '../shiny-app/www/annotation_example.png',
+           width = '100%')
+    }, deleteFile = FALSE)
     
     # control data flow
     dataControl = reactiveValues(annoStart = 0,
@@ -447,9 +454,7 @@ server <- function(input, output, session) {
         return(NULL)
       }
       else {
-        #! Note that the path also needs to be set in the python file (must be corresponding)
-        py_run_file('./app/get_proteus_evidence.py')
-        proteus_evidence_file <- read.csv('../data/out_proteus.csv', row.names = NULL)
+        proteus_evidence_file <- read.csv('./out_proteus.csv', row.names = NULL)
         }
     })
 
@@ -462,7 +467,7 @@ server <- function(input, output, session) {
     
     ### annotate metadata for user
     categorial_anno <- reactive({
-      proteus_data <- read.csv('../data/out_proteus.csv', row.names = NULL)
+      proteus_data <- read.csv('./out_proteus.csv', row.names = NULL)
       proteus_experiment <- unique(proteus_data$experiment)
       proteus_intensity <- rep('Intensity', times = length(proteus_experiment))
       proteus_null <- rep('NULL', times = length(proteus_experiment))
@@ -527,7 +532,7 @@ server <- function(input, output, session) {
     # Proteus: create a peptide & protein dataset
     proteus_method_proteus_prodat <- reactive({
       if (dataControl$annoSubmit > 0) {
-        evi <- read.csv('../data/out_proteus.csv', row.names = NULL)
+        evi <- read.csv('./out_proteus.csv', row.names = NULL)
         meta <- proteus_metadata()
         proteus_pepdat <- makePeptideTable(evi, meta, ncores = 1)
         proteus_prodat <- makeProteinTable(proteus_pepdat, ncores = 1)
@@ -673,12 +678,8 @@ server <- function(input, output, session) {
         return(NULL)
       }
       else {
-        #! Note that the path also needs to be set in the python file (must be corresponding)
-        py_run_file('./app/generate_configuration_xml.py')
-        configuration_data <- readLines('../data/NAME_configuration.xml')
+        configuration_data <- readLines('./NAME_configuration.xml')
         cat(configuration_data, sep = '\n')
-
-        
       }
     })
     
@@ -696,8 +697,8 @@ server <- function(input, output, session) {
         return(NULL)
       }
       else {
-        getAnalytics(inputdf())
-        datatable(analyticsData <- read.csv('../data/NAME_analytics.csv'),
+        getAnalytics(inputdf(), DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
+        datatable(analyticsData <- read.csv('./NAME_analytics.csv'),
                   options = list(scrollX = TRUE)
         )
       }
@@ -717,3 +718,4 @@ server <- function(input, output, session) {
 
 # Run the app ----
 shinyApp(ui = ui, server = server)
+}
