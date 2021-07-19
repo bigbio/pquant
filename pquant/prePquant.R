@@ -6,6 +6,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd("./data/")
 fileData <- read.csv('out_msstats.csv')
 
+# If run dataProcess() occuring an error message, please change "summaryMethod = 'TMP'" to "summaryMethod = 'linear'"
 DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
                                          normalization = 'equalizeMedians',
                                          summaryMethod = 'TMP',
