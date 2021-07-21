@@ -6,12 +6,15 @@ channels:
   - r
   - conda-forge
 dependencies:
-  - conda-forge::python=3.8.5
-  - bioconda::bioconductor-msstats
-  - bioconda::triqler
-  - conda-forge::r-devtools
-  - bioconda::bioconductor-limma
-  - conda-forge::r-ggplot2
-  - conda-forge::pandas
-  - conda-forge::numpy
-  - conda-forge::click
+#  - conda-forge::python=3.8.5
+  - bioconda::bioconductor-msstats=4.0.0
+#  - bioconda::triqler
+#  - conda-forge::r-devtools
+#  - bioconda::bioconductor-limma
+#  - conda-forge::r-ggplot2
+#  - conda-forge::pandas
+#  - conda-forge::numpy
+#  - conda-forge::click
+#  - conda-forge::shinywidgets
+#  - r::r-shiny
+#  - conda-forge::openblas
