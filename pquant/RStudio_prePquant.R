@@ -1,17 +1,17 @@
 prePquant <- function(fileData){
 
 library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
-library(reticulate)  
+library(reticulate)
 
-  
-# If run dataProcess() occuring an error message, please change "summaryMethod = 'TMP'" to "summaryMethod = 'linear'"  
+
+# If run dataProcess() occuring an error message, please change "summaryMethod = 'TMP'" to "summaryMethod = 'linear'"
 DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
                                            normalization = 'equalizeMedians',
                                            summaryMethod = 'TMP',
                                            censoredInt = "NA",
                                            MBimpute = TRUE)
-  
-  
+
+
 DDA2009.TMP <- MSstats::dataProcess(raw = fileData,
                                       normalization = 'equalizeMedians',
                                       summaryMethod = 'TMP',
@@ -53,7 +53,7 @@ write.csv(DDA2009.comparisons$ComparisonResult, file="MSstats_output.csv")
 #! /usr/bin/python
 #conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
 
-reticulate::py_run_file('../py/MSstatas to pheatmap.py')
+reticulate::py_run_file('../py/MSstatas_pheatmap.py')
 
 reticulate::py_run_file('../py/get_proteus_evidence.py')
 

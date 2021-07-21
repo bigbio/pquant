@@ -39,7 +39,7 @@ def get_data(disease, information, data_dir):
 
                 label = information[i] + '; ' + disease[j]
                 assay_label.append(label)
-                
+
                 aid = 'g' + str(g)
                 assay_id.append(aid)
                 g += 1
@@ -71,11 +71,11 @@ def get_data(disease, information, data_dir):
 
                 label = disease[i] + '; ' + information[j]
                 assay_label.append(label)
-                
+
                 aid = 'g' + str(g)
                 assay_id.append(aid)
                 g += 1
-                
+
                 assay.append(list(atmp['source name']))
 
                 if g % 2 == 0:
@@ -126,12 +126,12 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
         node_assayG.setAttribute('id', assay_id[i])
         node_assayG.setAttribute('label', assay_label[i])
         node_assayGs.appendChild(node_assayG)
-        
+
         for j in range(len(assay[i])):
             node_assay = doc.createElement('assay')
             node_assay.appendChild(doc.createTextNode(assay[i][j]))
             node_assayG.appendChild(node_assay)
-        
+
 
 
     for i in range(len(contrast_id)):
@@ -164,9 +164,9 @@ def get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir):
 
 
 if __name__ == "__main__":
-    
+
     now_dir = os.getcwd()
-    now_dir = 'D:/dataset/R downstream analysis/pquant/data'
+    #now_dir = 'D:/dataset/R downstream analysis/pquant/data'
     data_dir = now_dir
 
     sdrfType = '.tsv'
@@ -185,8 +185,8 @@ if __name__ == "__main__":
     disease = sorted(disease.unique())
     information = sorted(information.unique())
 
-    
+
 
     assay_label, assay_id, assay, contrast_name, contrast_id = get_data(disease, information, data_dir)
 
-    get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir)   
+    get_xml(assay_label, assay_id, assay, contrast_name, contrast_id, data_dir)
