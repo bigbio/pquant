@@ -1,22 +1,27 @@
-prePquant <- function(fileData){
-
-library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
+#library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
+library(MSstats)
 library(reticulate)  
 
-  
-# If run dataProcess() occuring an error message, please change "summaryMethod = 'TMP'" to "summaryMethod = 'linear'"  
+### get a "/pquant/data" path
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd("./data/")
+fileData <- read.csv('out_msstats.csv')
+
+# If run dataProcess() occuring an error message, please change "summaryMethod = 'TMP'" to "summaryMethod = 'linear'"
 DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
-                                           normalization = 'equalizeMedians',
-                                           summaryMethod = 'TMP',
-                                           censoredInt = "NA",
-                                           MBimpute = TRUE)
-  
-  
+                                         normalization = 'equalizeMedians',
+                                         summaryMethod = 'TMP',
+                                         #summaryMethod = 'linear',  
+                                         censoredInt = "NA",
+                                         MBimpute = TRUE)
+
+
 DDA2009.TMP <- MSstats::dataProcess(raw = fileData,
-                                      normalization = 'equalizeMedians',
-                                      summaryMethod = 'TMP',
-                                      censoredInt = NULL,
-                                      MBimpute=FALSE)
+                                    normalization = 'equalizeMedians',
+                                    #summaryMethod = 'TMP',
+                                    summaryMethod = 'linear',
+                                    censoredInt = NULL,
+                                    MBimpute=FALSE)
 
 
 # Automatically create the manually created matrix in MSstats, user manual p23
@@ -29,6 +34,7 @@ for(i in 1:len-1){
 }
 ourMatrix[len,1] = 1
 
+#ourCondition <- unique(fileData$Condition)
 ourCondition <- levels(DDA2009.TMP$ProteinLevelData$GROUP)
 len2 <- length(ourCondition)
 tmp <- matrix(ourCondition, nr=len2, nc=1)
@@ -42,7 +48,7 @@ row.names(ourMatrix) <- name
 #----------End of creation-----------
 colnames(ourMatrix) <- ourCondition
 
-DDA2009.comparisons <- MSstats::groupComparison(contrast.matrix = ourMatrix,
+DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
                                        data = DDA2009.proposed)
 
 save(DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons, file = "preShiny.RData")
@@ -53,7 +59,4 @@ write.csv(DDA2009.comparisons$ComparisonResult, file="MSstats_output.csv")
 #! /usr/bin/python
 #conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
 
-reticulate::py_run_file('../py/MSstatas to pheatmap.py')
-
-return(0)
-}
+py_run_file('../py/MSstatas to pheatmap.py')
