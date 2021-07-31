@@ -5,16 +5,14 @@ library('MSstats', warn.conflicts = F, quietly = T, verbose = F)
 library(reticulate)
 library(pheatmap)
 library(rhandsontable)
-
-
-# Source getPlots functions
-source("../shiny-app/app/getPlots.R")
-source("../shiny-app/app/getSelector.R")
+library(MSstats)
 
 setwd(getwd())
 
+# Source getPlots functions
+source("./app/getPlots.R")
+source("./app/getSelector.R")
 
-pquant_shiny <- function(DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons){
   
 ui <- dashboardPage(
     dashboardHeader(title = "pQuantR"),
@@ -27,11 +25,22 @@ ui <- dashboardPage(
                          tags$hr(), 
                          
                          # file selection box
-                         fileInput('csvFile', 'Choose the same \'out_msstats.csv\'', multiple = FALSE, 
+                         fileInput('csvFile', 'Choose the \'out_msstats.csv\'', multiple = FALSE, 
                                    accept=c('text/csv', 'text/comma-separated-values,text/plain')), # CSV text file
-                         br(),
+                         helpText(' Note: \'out_msstats.csv\' is ... '),
                          
-                         helpText('Note: \'out_msstats.csv\' is ... ')
+                         tags$hr(), 
+                         
+                         h5('Click the button to preprocess data,'),
+                         h5('and the progress bar will be'),
+                         h5('displayed in the lower right corner.'),
+                         br(),
+                         helpText('A 40Mb file takes about 6 mins.'),
+                         actionButton(inputId = "start_preprocess",
+                                      label = "Start Preprocessing",
+                                      icon = icon("play-circle"),
+                                      style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                      )
                          ),
         
         
@@ -79,6 +88,22 @@ ui <- dashboardPage(
                                          br()
                                 )
                          )
+        ),
+        
+        # specific protein sidebar
+        conditionalPanel(condition = "input.main_tabs == 'specific_protein_condition'",
+                         br(),
+                         h5('Select a specific protein: '),
+                         br(),
+                         uiOutput('specific_protein_selector'),
+                         br(),
+                         actionButton(inputId = "specific_protein_Render",
+                                      label = "Render Plot",
+                                      icon = icon("play-circle"),
+                                      style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                         ),
+                         br()
+
         )
 ),
   
@@ -94,7 +119,8 @@ ui <- dashboardPage(
                         fluidRow(
                             column(10,
                                 DT::DTOutput("contents", width = '80%')
-                            )
+                            )    
+                        
                         )
                      )
             ),
@@ -134,11 +160,36 @@ ui <- dashboardPage(
 
                    
                      )
+            ),
+            
+            # specific protein tab
+            tabPanel(title = 'Specific protein',
+                     value = 'specific_protein_condition',
+                     
+                     fluidPage(
+                       fluidRow(
+                         column(6,
+                                plotOutput('specific_protein_qcplot_out')
+                         ),
+                         column(6,
+                                plotOutput('specific_protein_profileplot_out')
+                         ),
+                       ),
+                       
+                       br(),
+                       
+                       fluidRow(
+                         column(9, 
+                                #align="center",   # doesn't work
+                                plotOutput('specific_protein_conditionplot_out')
+                         )
+                       )                      
+                     )
+                    )
             )
                      
         )
             
-    )
 )
 
 
@@ -165,6 +216,72 @@ server <- function(input, output, session) {
     })
     
     
+    ### progress function
+    prePquant <- reactiveValues()
+    
+    observeEvent(input$start_preprocess, {
+      
+      fileData <- read.csv(input$csvFile$datapath)
+      
+      print("test")
+      
+      progress <- shiny::Progress$new()
+      on.exit(progress$close())
+      
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.1)
+      setwd("../data/")
+      prePquant$DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
+                                               normalization = 'equalizeMedians',
+                                               summaryMethod = 'TMP', 
+                                               censoredInt = "NA",
+                                               MBimpute = TRUE)
+      
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
+      prePquant$DDA2009.TMP <- MSstats::dataProcess(raw = fileData,
+                                          normalization = 'equalizeMedians',
+                                          summaryMethod = 'TMP',
+                                          censoredInt = NULL,
+                                          MBimpute=FALSE)
+      
+      progress$set(message = "Begin to generate group comparison, please wait...", value = 0.8)
+      # Automatically create the manually created matrix in MSstats, user manual p23
+      len <- length(levels(prePquant$DDA2009.TMP$FeatureLevelData$GROUP))
+      
+      ourMatrix <- matrix(c(0:0),nrow=len,ncol=len)
+      diag(ourMatrix) = -1
+      for(i in 1:len-1){
+        ourMatrix[i,i+1] = 1
+      }
+      ourMatrix[len,1] = 1
+      
+      ourCondition <- levels(prePquant$DDA2009.TMP$ProteinLevelData$GROUP)
+      len2 <- length(ourCondition)
+      tmp <- matrix(ourCondition, nr=len2, nc=1)
+      name <- matrix(nr=len2, nc=1)
+      for(i in 1:len2-1){
+        name[i,1] <- sprintf('%s-%s', tmp[i+1,1], tmp[i,1])
+      }
+      name[len2,1] <- sprintf('%s-%s', tmp[1,1], tmp[len2,1])
+      
+      row.names(ourMatrix) <- name
+      #----------End of creation-----------
+      colnames(ourMatrix) <- ourCondition
+      prePquant$DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
+                                             data = prePquant$DDA2009.proposed)
+ 
+      write.csv(prePquant$DDA2009.comparisons$ComparisonResult, file="MSstats_output.csv")
+      
+      #! /usr/bin/python
+      #conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
+      
+      py_run_file('../py/MSstatas to pheatmap.py')
+      
+    
+      progress$set(message = "Preprocessing is over.", value = 1)
+    })
+    
+    
+    
     # default_method volcano plot
     default_method_volcano_plot <- reactive({
         if(input$default_method_volcano_Render == 0) {
@@ -172,7 +289,7 @@ server <- function(input, output, session) {
         }
         else {
             getPlot(inputdf(), flag = 'volcano', selector = input$default_method_volcano_input,
-                    DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
+                    prePquant$DDA2009.proposed, prePquant$DDA2009.TMP, prePquant$DDA2009.comparisons)
         }
     })
     
@@ -182,7 +299,7 @@ server <- function(input, output, session) {
         }
         else {
             default_method_vol_selector <- getSelector(inputdf(), flag = 'volcano',
-                                                       DDA2009.proposed, DDA2009.TMP)
+                                                       prePquant$DDA2009.proposed, prePquant$DDA2009.TMP)
             selectInput(inputId = 'default_method_volcano_input',
                         label = 'Options',
                         choices = as.list(default_method_vol_selector)
@@ -205,7 +322,8 @@ server <- function(input, output, session) {
             return(NULL)
         }
         else {
-            getPlot(inputdf(), flag = 'heat', DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
+            getPlot(inputdf(), flag = 'heat',
+                    prePquant$DDA2009.proposed, prePquant$DDA2009.TMP, prePquant$DDA2009.comparisons)
         }
     })
     
@@ -221,7 +339,7 @@ server <- function(input, output, session) {
         }
         else {
             getPlot(inputdf(), flag = 'qc', selector = input$default_method_qc_input,
-                    DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons)
+                    prePquant$DDA2009.proposed, prePquant$DDA2009.TMP, prePquant$DDA2009.comparisons)
         }
     })
     
@@ -231,7 +349,7 @@ server <- function(input, output, session) {
         }
         else {
             default_method_qc_selector <- getSelector(inputdf(), flag = 'qc',
-                                                      DDA2009.proposed, DDA2009.TMP)
+                                                      prePquant$DDA2009.proposed, prePquant$DDA2009.TMP)
             selectInput(inputId = 'default_method_qc_input',
                         label = 'Options',
                         choices = as.list(default_method_qc_selector)
@@ -246,9 +364,77 @@ server <- function(input, output, session) {
     output$default_method_qc_out <- renderPlot({
         default_method_qc_plot()        
     })
+    
+
+        
+    ### specific protein
+    output$specific_protein_selector <- renderUI({
+      specific_protein_select()
+    })
+    
+    specific_protein_select <- reactive({
+      if(input$csvFile == 0) {
+        return(NULL)
+      }
+      else {
+        specific_protein_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+        selectInput(inputId = 'specific_protein_select_input',
+                    label = 'Options',
+                    choices = as.list(specific_protein_selector)
+        )
+      }
+    })
+    
+    
+    #specific_protein_qcplot_out
+    specific_protein_qc_plot <- reactive({
+      if(input$specific_protein_Render == 0) {
+        return(NULL)
+      }
+      else {
+        dataProcessPlots(data = prePquant$DDA2009.proposed, type="QCPlot",
+                         which.Protein=input$specific_protein_select_input,
+                         width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$specific_protein_qcplot_out <- renderPlot({
+      specific_protein_qc_plot()
+    })
+    
+    #specific_protein_profileplot_out
+    specific_protein_profileplot_plot <- reactive({
+      if(input$specific_protein_Render == 0) {
+        return(NULL)
+      }
+      else {
+        dataProcessPlots(data = prePquant$DDA2009.proposed, type="ProfilePlot",
+                         which.Protein=input$specific_protein_select_input,
+                         width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$specific_protein_profileplot_out <- renderPlot({
+      specific_protein_profileplot_plot()
+    })
+    
+    #specific_protein_conditionplot_out
+    specific_protein_conditionplot_plot <- reactive({
+      if(input$specific_protein_Render == 0) {
+        return(NULL)
+      }
+      else {
+        dataProcessPlots(data = prePquant$DDA2009.proposed, type="ConditionPlot",
+                         which.Protein=input$specific_protein_select_input,
+                         width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$specific_protein_conditionplot_out <- renderPlot({
+      specific_protein_conditionplot_plot()
+    })
      
 }
 
 # Run the app ----
 shinyApp(ui = ui, server = server)
-}
