@@ -21,26 +21,59 @@ ui <- dashboardPage(
         
         # fileinput side bar menu
         conditionalPanel(condition = "input.main_tabs == 'fileinput_condition'",
-                         h5('Note: this shiny app ...'),
-                         tags$hr(), 
+                         sidebarMenu(
+                             menuItem("Upload file", startExpanded = TRUE,
+                                 # file selection box
+                                 fileInput('csvFile', 'Choose the \'out_msstats.csv\'', multiple = FALSE, 
+                                           accept=c('text/csv', 'text/comma-separated-values,text/plain')) # CSV text file
+                                 #helpText(' Note: \'out_msstats.csv\' is ... ')
+                             ),
+                             
+                             menuItem("Parameters selection", startExpanded = TRUE,
+                                 radioButtons(inputId = "user_choose_logTrans",
+                                              label = "Choose logarithm transformation",
+                                              choices = c("2" = "2",
+                                                          "10" = "10"),
+                                              selected = "2"),
+                                 
+                                 radioButtons(inputId = "user_choose_normalization",
+                                              label = "Choose normalization",
+                                              choices = c("equalizeMedians" = "equalizeMedians",
+                                                          "quantile" = "quantile",
+                                                          "globalStandards" = "globalStandards",
+                                                          "no normalization" = "FALSE"),
+                                              selected = "equalizeMedians"),
+                                 
+                                 radioButtons(inputId = "user_choose_summaryMethod",
+                                              label = "Choose summary method",
+                                              choices = c("Tukey’s median polish(TMP)" = "TMP",
+                                                          "linear mixed model" = "linear"),
+                                              selected = "TMP"),
+                                              
+                                 numericInput(inputId = "user_choose_maxQuantileforCensored",
+                                              label = "Choose maxQuantile for deciding censored missing values",
+                                              value = 0.999
+                                              )
+                             ),
+                             
+                             
+                             menuItem("Start preprocessing", startExpanded = TRUE,
+                                 h5('Click the button to preprocess data,'),
+                                 h5('and the progress bar will be'),
+                                 h5('displayed in the lower right corner.'),
+                                 br(),
+                                 helpText('A 40Mb file takes about 6 mins.'),
+                                 actionButton(inputId = "start_preprocess",
+                                              label = "Start Preprocessing",
+                                              icon = icon("play-circle"),
+                                              style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                              )   
+                             )
+                             #tags$hr()
+                         )
                          
-                         # file selection box
-                         fileInput('csvFile', 'Choose the \'out_msstats.csv\'', multiple = FALSE, 
-                                   accept=c('text/csv', 'text/comma-separated-values,text/plain')), # CSV text file
-                         helpText(' Note: \'out_msstats.csv\' is ... '),
                          
-                         tags$hr(), 
                          
-                         h5('Click the button to preprocess data,'),
-                         h5('and the progress bar will be'),
-                         h5('displayed in the lower right corner.'),
-                         br(),
-                         helpText('A 40Mb file takes about 6 mins.'),
-                         actionButton(inputId = "start_preprocess",
-                                      label = "Start Preprocessing",
-                                      icon = icon("play-circle"),
-                                      style ="display: block; margin: 0 auto; width: 200px;color: black;"
-                                      )
                          ),
         
         
@@ -84,8 +117,7 @@ ui <- dashboardPage(
                                                       label = "Render Plot",
                                                       icon = icon("play-circle"),
                                                       style ="display: block; margin: 0 auto; width: 200px;color: black;"
-                                         ),
-                                         br()
+                                         )
                                 )
                          )
         ),
@@ -189,7 +221,7 @@ ui <- dashboardPage(
             )
                      
         )
-            
+      
 )
 
 
@@ -230,18 +262,23 @@ server <- function(input, output, session) {
       
       progress$set(message = "Begin to preprocess data, please wait...", value = 0.1)
       setwd("../data/")
+      
       prePquant$DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
-                                               normalization = 'equalizeMedians',
-                                               summaryMethod = 'TMP', 
+                                               logTrans = as.numeric(input$user_choose_logTrans),
+                                               normalization = input$user_choose_normalization,
+                                               summaryMethod = input$user_choose_summaryMethod,
+                                               maxQuantileforCensored = input$user_choose_maxQuantileforCensored,
                                                censoredInt = "NA",
                                                MBimpute = TRUE)
       
       progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
       prePquant$DDA2009.TMP <- MSstats::dataProcess(raw = fileData,
-                                          normalization = 'equalizeMedians',
-                                          summaryMethod = 'TMP',
+                                          logTrans = as.numeric(input$user_choose_logTrans),
+                                          normalization = input$user_choose_normalization,
+                                          summaryMethod = input$user_choose_summaryMethod,
+                                          maxQuantileforCensored = input$user_choose_maxQuantileforCensored,
                                           censoredInt = NULL,
-                                          MBimpute=FALSE)
+                                          MBimpute = FALSE)
       
       progress$set(message = "Begin to generate group comparison, please wait...", value = 0.8)
       # Automatically create the manually created matrix in MSstats, user manual p23
