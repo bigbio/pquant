@@ -8,7 +8,6 @@ library(rhandsontable)
 library(MSstats)
 library(shinyjs)
 library(shinyWidgets)
-library(proteus)
 library(ggplot2)
 
 setwd(getwd())
@@ -16,7 +15,7 @@ setwd(getwd())
 # Source getPlots functions
 source("./app/getPlots.R")
 source("./app/getSelector.R")
-source("./app/proteus_live.R")
+source("./app/volcano_live.R")
 
 
   
@@ -147,23 +146,11 @@ ui <- dashboardPage(
 
         ),
         
-        # proteus volcano sidebar
-        conditionalPanel(condition = "input.main_tabs == 'proteus_volcano'",
+        # dynamic volcano
+        conditionalPanel(condition = "input.main_tabs == 'dynamic_volcano'",
                          br(),
                          sidebarMenu(
-                           menuItem("Data handling",
-                                    helpText('Click to convert \'out.csv\' to a'),
-                                    helpText('Proteus-compliant input format.'),
-                                    br(),
-                                    helpText('Make sure you have \'out_mztab.csv\''),
-                                    helpText('in your data file folder.'),
-                                    actionButton(inputId = "proteus_method_start_Render",
-                                                 label = "Start",
-                                                 icon = icon("play-circle"),
-                                                 width = 200),
-                                    br()
-                           ),
-                           menuItem("Assign metadata",
+                           menuItem("Assign condition",
                                     div(style = "text-align:center", "Click to render annotation table"),
                                     actionButton(inputId = "start_anno",
                                                  label = "Start",
@@ -175,7 +162,6 @@ ui <- dashboardPage(
                                         br(), "comparisons.",
                                         br(),br(), "Example:"),
                                     img(src = 'annotation_example.png', width = '100%'),
-                                    #imageOutput('proteus_annotation_example'),
                                     div(style = "text-align:center", "once done renaming press",
                                         br(), "\'submit\' to lock in the annotation"),
                                     actionButton(inputId = "submit_anno",
@@ -190,8 +176,8 @@ ui <- dashboardPage(
                            ),
                            menuItem("Volcano plot",
                                     br(),
-                                    uiOutput('proteus_volcano_selector'),
-                                    actionButton(inputId = "proteus_volcano_Render",
+                                    uiOutput('dynamic_volcano_selector'),
+                                    actionButton(inputId = "dynamic_volcano_Render",
                                                  label = "Render Plot",
                                                  icon = icon("play-circle"),
                                                  style ="display: block; margin: 0 auto; width: 200px;color: black;"
@@ -286,28 +272,27 @@ ui <- dashboardPage(
                      )
             ),
             
-            # proteus volcano tab
-            tabPanel(title = 'Proteus volcano',
-                     value = 'proteus_volcano',
+            # dynamic volcano tab
+            tabPanel(title = 'Dynamic volcano',
+                     value = 'dynamic_volcano',
                      fluidPage(
                        tabBox(# No title
-                         id = "proteus_tabbox1", selected = "proteus_tabbox_data", width = 12,
+                         id = "dynamic_tabbox1", selected = "dynamic_tabbox_data", width = 12,
                          tabPanel(
-                           title = "Data", value = "proteus_tabbox_data",
+                           title = "Data", value = "dynamic_tabbox_data",
                            fluidRow(
                              column(width = 8,
-                                    DT::DTOutput("proteus_evidence_contents")),
+                                    DT::DTOutput("dynamic_evidence_contents")),
                              column(width = 4,
-                                    rHandsontableOutput("proteus_define_metadata"))
+                                    rHandsontableOutput("dynamic_define_metadata"))
                            )),
                          tabPanel(
-                           title = "Plot", value = "proteus_tabbox_plot",
+                           title = "Plot", value = "dynamic_tabbox_plot",
                            
                            ### from Proteus: live.R
                            fluidRow(
-                             column(5, plotOutput("proteus_plotVolcano_out", height = "600px", width = "100%", brush = "plot_brush",hover="plot_hover")),
+                             column(5, plotOutput("dynamic_plotVolcano_out", height = "600px", width = "100%", brush = "plot_brush",hover="plot_hover")),
                              column(7,
-                                    fluidRow(tableOutput("proteus_proteinInfo_out")),
                                     fluidRow(
                                       column(4,
                                              radioButtons("intensityScale","Intesity Scale:",choices = c("Linear scale" = "","Log scale"="Log"),inline = TRUE)
@@ -315,12 +300,13 @@ ui <- dashboardPage(
                                     ),
                                     fluidRow(
                                       column(4,
-                                             fluidRow(plotOutput("proteus_jitterPlot_out", height = "300px",width = "100%")),
-                                             fluidRow(htmlOutput("proteus_gap_out")),
-                                             fluidRow(tableOutput("proteus_significanceTable_out"))
+                                             fluidRow(plotOutput("dynamic_jitterPlot_out", height = "300px",width = "100%")),
+                                             fluidRow(htmlOutput("dynamic_gap_out")),
+                                             fluidRow(tableOutput("dynamic_significanceTable_out1")),
+                                             fluidRow(tableOutput("dynamic_significanceTable_out2"))
                                       ),
-                                      column(3,
-                                             fluidRow(tableOutput("proteus_replicateTable_out"))
+                                      column(2,
+                                             fluidRow(tableOutput("dynamic_replicateTable_out"))
                                       )
                                     )
                              )
@@ -329,7 +315,7 @@ ui <- dashboardPage(
                            # Show main protein table
                            fluidRow(
                              column(width = 12,
-                                    DT::dataTableOutput("proteus_allProteinTable_out"))
+                                    DT::dataTableOutput("dynamic_allProteinTable_out"))
                            )
                          )
                          
@@ -389,7 +375,7 @@ server <- function(input, output, session) {
                                                MBimpute = TRUE,
                                                use_log_file = FALSE)
       
-      progress$set(message = "Begin to preprocess data, please wait...", value = 0.3)
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
       prePquant$DDA2009.TMP <- MSstats::dataProcess(raw = fileData,
                                           logTrans = as.numeric(input$user_choose_logTrans),
                                           normalization = input$user_choose_normalization,
@@ -399,7 +385,7 @@ server <- function(input, output, session) {
                                           MBimpute = FALSE,
                                           use_log_file = FALSE)
       
-      progress$set(message = "Begin to generate group comparison, please wait...", value = 0.6)
+      progress$set(message = "Begin to generate group comparison, please wait...", value = 0.7)
       # Automatically create the manually created matrix in MSstats, user manual p23
       len <- length(levels(prePquant$DDA2009.TMP$FeatureLevelData$GROUP))
       
@@ -426,25 +412,7 @@ server <- function(input, output, session) {
                                              data = prePquant$DDA2009.proposed,
                                              use_log_file = FALSE)
  
-      
-      #! /usr/bin/python
-      #conda_install(packages = 'pandas') # If you are using it for the first time, you need to install the pandas package
-
-      progress$set(message = "Begin to preprocess proteus data, please wait...", value = 0.8)
-      
-      setwd('../data/')
-      reticulate::py_run_file('../py/get_proteus_evidence.py')
-      proteus_evidence_file <- read.csv('out_proteus.csv', row.names = NULL)
-      # Prevent the occurrence of ''(null value)
-      proteus_evidence_file <- unique(proteus_evidence_file)
-      proteus_evidence_file[proteus_evidence_file == ''] <- NA
-      proteus_evidence_file <- na.omit(proteus_evidence_file)
-      write.csv(proteus_evidence_file, 'out_proteus.csv', row.names = F)
-      
-      prePquant$out_proteus <- proteus_evidence_file
-    
       progress$set(message = "Preprocessing is over.", value = 1)
-      setwd(getwd())
     })
     
     
@@ -604,7 +572,7 @@ server <- function(input, output, session) {
     
     
     
-    ### ---Proteus volcano---
+    ### ---dynamic volcano---
     
     
     # control data flow
@@ -628,52 +596,42 @@ server <- function(input, output, session) {
     })
     
     
-    
-    
     ### start_convert_to_proteus
-    proteus_method_start_convert <- reactive({
-      if(input$proteus_method_start_Render == 0) {
+    dynamic_method_start_convert <- reactive({
+      inFile <- input$csvFile
+      if(is.null(inFile)) {
         return(NULL)
       }
       else {
-        proteus_evidence_file <- prePquant$out_proteus
+        fileData <- read.csv(input$csvFile$datapath)
+        dynamic_data <- sort(unique(fileData[, ncol(fileData)]))
+        dynamic_data <- cbind(Reference=dynamic_data, measure="Intensity")
+        dynamic_data
       }
     })
     
-    output$proteus_evidence_contents <- renderDT({
-      datatable(proteus_method_start_convert(),
+    output$dynamic_evidence_contents <- renderDT({
+      datatable(dynamic_method_start_convert(),
                 options = list(scrollX = TRUE)
       )
     })
-    
+
     
     ### annotate metadata for user
     categorial_anno <- reactive({
-      proteus_data <- prePquant$out_proteus
-      proteus_experiment <- unique(proteus_data$experiment)
-      proteus_intensity <- rep('Intensity', times = length(proteus_experiment))
-      proteus_null <- rep('NULL', times = length(proteus_experiment))
+      fileData <- read.csv(input$csvFile$datapath)
+      dynamic_null <- rep('NULL', times = length(unique(fileData[, ncol(fileData)])))
       
-      metadata <- data.frame(experiment = proteus_experiment,
-                             measure = proteus_intensity,
-                             sample = proteus_experiment,
-                             condition = proteus_null,
-                             replicate_notNecessary = proteus_null
-      )
+      metadata <- data.frame(condition = dynamic_null)
       return(metadata)
     })
     
     
-    output$proteus_define_metadata <- renderRHandsontable({
+    output$dynamic_define_metadata <- renderRHandsontable({
       if (dataControl$annoStart > 0) {
         categorial_anno <- categorial_anno()
-        categorial_anno$experiment <- as.character(categorial_anno$experiment)
-        categorial_anno$measure <- as.character(categorial_anno$measure)
-        categorial_anno$sample <- as.character(categorial_anno$experiment)
         categorial_anno$condition <- as.character(categorial_anno$condition)
-        categorial_anno$replicate_notNecessary <- as.character(categorial_anno$replicate_notNecessary)
-        tab <- rhandsontable(categorial_anno) %>%
-          hot_col("experiment", readOnly = T)
+        tab <- rhandsontable(categorial_anno)
         return(tab)
       } else {
         return(NULL)
@@ -683,9 +641,9 @@ server <- function(input, output, session) {
     
     #get data from user
     #displays need to signal data is submitted
-    proteus_metadata <- reactive({
+    dynamic_metadata <- reactive({
       if (dataControl$annoSubmit > 0) {
-        reps <- isolate(input$proteus_define_metadata)
+        reps <- isolate(input$dynamic_define_metadata)
         repsOut <- hot_to_r(reps)
         return(repsOut)
       } else {
@@ -705,105 +663,207 @@ server <- function(input, output, session) {
           closeOnClickOutside = TRUE,
           width = 400
         )
-        disable("submit_anno")  # hide("proteus_define_metadata")
+        disable("submit_anno")  # hide("dynamic_define_metadata")
       } else {
-        enable("submit_anno")   # show("proteus_define_metadata")
+        enable("submit_anno")   # show("dynamic_define_metadata")
       }
     })
     
     # Proteus: create a peptide & protein dataset
-    proteusLive <- reactiveValues()
+    volcanoLive <- reactiveValues()
     
     observeEvent(input$submit_anno, {
-      
-      evi <- prePquant$out_proteus
-      
+
       progress <- shiny::Progress$new()
       on.exit(progress$close())
       
       progress$set(message = "Begin to preprocess data, please wait...", value = 0.1)
-      meta <- proteus_metadata()
+      fileData <- read.csv(input$csvFile$datapath)
+      meta <- dynamic_metadata()
+      
+      sequence.col <- "sequence"
+      protein.col <- "protein"
+      experiment.type <- "label-free"
+      ncores = 4
+      # mclapply doesn't work on Windows, so force 1 core
+      if(Sys.info()[['sysname']] == "Windows") {
+        ncores <- 1
+        warning("Multicore processing not available in Windows. Using ncores=1")
+      }
       
       progress$set(message = "Begin to preprocess data, please wait...", value = 0.3)
-      proteus_pepdat <- makePeptideTable(evi, meta)
+      measureColumns <- list(
+        Intensity = 'Intensity'
+      )
+      measures <- names(measureColumns)
+      
+      tabMelt <- fileData[,c(2,10,11)]
+      names(tabMelt)[1] <- "sequence"
+      names(tabMelt)[2] <- "value"
+      names(tabMelt)[3] <- "sample"
+      
+      # create unique sequence names
+      tabMelt$seqsam <- paste0(tabMelt$sequence, ".", tabMelt$sample)
+      tabMelt <- tabMelt[order(tabMelt$seqsam),]
+      s2s <- setNames(tabMelt$sequence, tabMelt$seqsam)
+      r <- rle(tabMelt$seqsam)
+      tabMelt$uniseq <- paste0(rep(s2s[r$values], times=r$lengths), ".", unlist(lapply(r$lengths, seq_len)))
+      
+      # cast into table: sample vs unique sequence
+      # in this table there are multiple entries per peptide
+      tab <- reshape2::dcast(tabMelt, uniseq ~ sample, sum, value.var="value")
+      
+      # original sequence
+      u2s <- setNames(tabMelt$sequence, tabMelt$uniseq)
+      sequences <- u2s[tab$uniseq]
+      
+      # extract numeric data as matrix
+      tab <- as.matrix(tab[,2:ncol(tab)])
+      tab[tab == 0] <- NA
       
       progress$set(message = "Begin to preprocess data, please wait...", value = 0.5)
-      proteus_prodat <- makeProteinTable(proteus_pepdat)
-
-      progress$set(message = "Begin to preprocess data, please wait...", value = 0.7)
-      proteusLive$pdat <- normalizeData(proteus_prodat)
+      aggregateSum <- function(wp) {
+        row <- colSums(wp, na.rm=TRUE)
+        row[row==0] <- NA    # colSums puts zeroes where the column contains only NAs (!!!)
+        return(as.vector(row))
+      }
+      aggregate.fun=aggregateSum
+      # aggregate peptides
+      ptab <- parallel::mclapply(unique(sequences), function(s) {
+        wp <- tab[sequences == s,, drop=FALSE]
+        x <- aggregate.fun(wp)
+        row <- as.data.frame(t(as.vector(x)))
+        rownames(row) <- s
+        return(row)
+      }, mc.cores=ncores)
+      ptab <- as.matrix(do.call(rbind, ptab))
+      colnames(ptab) <- colnames(tab)
+      peptides <- row.names(ptab)
       
-      proteusLive$max_points = 100
+      # peptide to protein conversion
+      pep2prot <- data.frame(sequence=fileData$PeptideSequence, protein=fileData$ProteinName)
+      pep2prot <- unique(pep2prot)
+      if(anyDuplicated(pep2prot$sequence) > 0) stop("Non-unique peptide-to-protein association found. Proteus requires that peptide sequence is uniquely associated with a protein or protein group.")
+      rownames(pep2prot) <- pep2prot$sequence
+      pep2prot <- pep2prot[peptides,]
+      proteins <- levels(as.factor(pep2prot$protein))
+
+            
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.7)
+      ### makeProteinTable
+      tab <- ptab
+      
+      protlist <- list()
+      for(cond in levels(factor(as.character(meta$condition)))) {
+        w <- tab[,which(meta$condition == cond), drop=FALSE]
+        samples <- colnames(w)
+        protcond <- parallel::mclapply(proteins, function(prot) {
+          sel <- which(pep2prot$protein == prot)
+          npep <- length(sel)
+          min.peptides=2
+          if(npep >= min.peptides)
+          {
+            wp <- w[sel,, drop=FALSE]
+            x <- aggregate.fun(wp)
+            row <- as.data.frame(t(as.vector(x)))
+          } else {
+            row <- as.data.frame(t(rep(NA, length(samples))))
+          }
+          names(row) <- samples
+          row <- data.frame(protein=prot, row, check.names=FALSE)
+          return(row)
+        }, mc.cores=ncores)
+        protint <- do.call(rbind, protcond)
+        protlist[[cond]] <- protint
+      }
+      
+      # dplyr join all tables
+      protab <- Reduce(function(df1, df2) dplyr::full_join(df1,df2, by="protein"), protlist)
+      
+      # remove empty rows (happens when min.peptides > 1)
+      protab <- protab[which(rowSums(!is.na(protab)) > 0), ]
+      proteins <- protab$protein
+      #protab <- as.matrix(protab[,as.character(unique(tabMelt$sample))])
+      rownames(protab) <- protab[,1]
+      protab <- protab[,-1]
+      
+      
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.9)
+      normalizeMedian <- function(tab) {
+        norm.fac <- apply(tab, 2, function(x) {median(x, na.rm=TRUE)})
+        norm.fac <- norm.fac / mean(norm.fac, na.rm=TRUE)
+        tab <- t(t(tab) / norm.fac)
+        return(tab)
+      }
+      protab <- normalizeMedian(protab)
+      
+      volcanoLive$pdat <- protab
+      
+      volcanoLive$max_points = 100
+      
+      progress$set(message = "Preprocessing is over.", value = 1)
     })
     
-    
-    observeEvent(input$proteus_volcano_Render, {
+    observeEvent(input$dynamic_volcano_Render, {
       
       
       progress <- shiny::Progress$new()
       on.exit(progress$close())
       
-      progress$set(message = "Begin to preprocess data, please wait...", value = 0.9)
-      tmp_selector = input$proteus_volcano_input
-      selector = unlist(strsplit(tmp_selector, split=' '))
-      print(selector)
-      proteusLive$res <- limmaDE(proteusLive$pdat, conditions=selector)
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.6)
       
-      proteusLive$res$"-log10(P.Value)" <- -log10(proteusLive$res$P.Value)
+      selector = input$dynamic_volcano_input
+      comparisons <- subset(prePquant$DDA2009.comparisons$ComparisonResult, Label==selector)
+      volcanoLive$res <- comparisons
+      
+      volcanoLive$res$"-log10(pvalue)" <- -log10(volcanoLive$res$pvalue)
+      
+      rownames(volcanoLive$res) <- c(1:nrow(volcanoLive$res))
+      
       progress$set(message = "Preprocessing is over.", value = 1)
     })
     
     
+    ### dynamic volcano Plot
     
-    ### Proteus Plot
-    
-    proteus_volcano_select <- reactive({
+    dynamic_volcano_select <- reactive({
       if(input$csvFile == 0) {
         return(NULL)
       }
       else {
-        con_list <- proteusLive$pdat[["conditions"]]
-        tmp_selector <- c()
-        x = 1
-        for (i in 1:(length(con_list)-1)){
-          for (j in (i+1):length(con_list)){
-            tmp <- paste(con_list[i],con_list[j],collapse=' ')
-            tmp_selector[x] <- tmp
-            x=x+1
-          }
-        }
-        proteus_vol_selector <- tmp_selector
-        selectInput(inputId = 'proteus_volcano_input',
+        dynamic_vol_selector <- getSelector(inputdf(), flag = 'volcano',
+                                                   prePquant$DDA2009.proposed, prePquant$DDA2009.TMP)
+        selectInput(inputId = 'dynamic_volcano_input',
                     label = 'Options',
-                    choices = as.list(proteus_vol_selector)
+                    choices = as.list(dynamic_vol_selector)
         )
       }
     })
     
-    output$proteus_volcano_selector <- renderUI({
-      proteus_volcano_select()
+    output$dynamic_volcano_selector <- renderUI({
+      dynamic_volcano_select()
     })
     
     
     
     # else
-    output$proteus_proteinInfo_out <- proteus_proteinInfo(proteusLive$res, input, proteusLive$pdat, proteusLive$max_points)
-    output$proteus_gap_out <- renderUI({HTML('<br/>')})
-    output$proteus_replicateTable_out <- proteus_replicateTable(proteusLive$res, input, proteusLive$pdat, proteusLive$max_points)
-    output$proteus_significanceTable_out <- proteus_significanceTable(proteusLive$res, proteusLive$res, input)
-    output$proteus_jitterPlot_out <- proteus_jitterPlot(proteusLive$res, input, proteusLive$pdat, proteusLive$max_points)
+    output$dynamic_gap_out <- renderUI({HTML('<br/>')})
+    output$dynamic_replicateTable_out <- dynamic_replicateTable(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points)
+    output$dynamic_significanceTable_out1 <- dynamic_significanceTable1(volcanoLive$res, volcanoLive$res, input)
+    output$dynamic_significanceTable_out2 <- dynamic_significanceTable2(volcanoLive$res, volcanoLive$res, input)
+    output$dynamic_jitterPlot_out <- dynamic_jitterPlot(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
     
     # Volcano plot
-    output$proteus_plotVolcano_out <- renderPlot({
+    output$dynamic_plotVolcano_out <- renderPlot({
       tab_idx <- as.numeric(input$allProteinTable_rows_selected)
-      pVol <- plotVolcano(proteusLive$res, binhex=FALSE)
+      pVol <- dynamic_plotVolcano(volcanoLive$res, binhex=FALSE)
       if(length(tab_idx) > 0) {
-        pVol <- pVol + geom_point(data=proteusLive$res[tab_idx,], size=3, color='red')
+        pVol <- pVol + geom_point(data=volcanoLive$res[tab_idx,], size=3, color='red')
       }
       pVol
     })
     
-    output$proteus_allProteinTable_out <- proteus_allProteinTable(proteusLive$res)
+    output$dynamic_allProteinTable_out <- dynamic_allProteinTable(volcanoLive$res)
     
 }
 
