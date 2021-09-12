@@ -30,8 +30,9 @@ ui <- dashboardPage(
                              menuItem("Upload file",
                                  # file selection box
                                  fileInput('csvFile', 'Choose the \'out_msstats.csv\'', multiple = FALSE, 
-                                           accept=c('text/csv', 'text/comma-separated-values,text/plain')) # CSV text file
-                                 #helpText(' Note: \'out_msstats.csv\' is ... ')
+                                           accept=c('text/csv', 'text/comma-separated-values,text/plain')), # CSV text file
+                                 helpText('If the preprocessing error occurred,'),
+                                 helpText('please change summary method.')
                              ),
                              
                              menuItem("Parameters selection", 
@@ -334,7 +335,7 @@ ui <- dashboardPage(
 
 # Define server logic ----
 server <- function(input, output, session) {
-    options(shiny.maxRequestSize=500*1024^2)
+    options(shiny.maxRequestSize=1000*1024^2)
     
 
     # -------------input---------------
@@ -697,7 +698,7 @@ server <- function(input, output, session) {
       )
       measures <- names(measureColumns)
       
-      tabMelt <- fileData[,c(2,10,11)]
+      tabMelt <- fileData[c("PeptideSequence","Intensity","Reference")]
       names(tabMelt)[1] <- "sequence"
       names(tabMelt)[2] <- "value"
       names(tabMelt)[3] <- "sample"
