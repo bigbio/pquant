@@ -96,20 +96,6 @@ dynamic_jitterPlot <- function(tab, input, pdat, max_points, meta) {
 
 
 
-dynamic_allProteinTable <- function(res) {
-  DT::renderDataTable({
-    # assume first column is id ("protein" or "peptide")
-    idcol <- names(res)[1]
-    cols <- c(idcol, "log2FC", "pvalue", "adj.pvalue")
-    d <- res[, cols]
-    d[, 2:ncol(d)] <- sapply(d[, 2:ncol(d)], function(x) signif(x, 3))
-    d <- DT::datatable(d, class = 'cell-border strip hover')
-    DT::formatStyle(d, 0, cursor = 'pointer')
-  })
-}
-
-
-
 
 simple_theme <- ggplot2::theme_bw() +
   ggplot2::theme(
