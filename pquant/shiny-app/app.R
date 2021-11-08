@@ -772,7 +772,7 @@ server <- function(input, output, session) {
     #q-q plot (quantile-quantile)
     output$default_method_qqPlot_out <- renderPlot({
         if(renderCheck$default_method_residual_qq > 0){
-            modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="ResidualPlots",
+            modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="QQPlots",
                               which.Protein=input$default_method_residual_qq_select_input,
                               width=10, height=5, address=FALSE)
         } else { return(NULL) }
