@@ -27,16 +27,18 @@ $> source build.sh
 ## Shiny application
 
 1. Preparing  for shiny app.<br>
-* Download `out_msstats.csv` from [this page](https://ftp.pride.ebi.ac.uk/pride/data/proteomes/proteogenomics/differential-expression/RPXD015270.1-cell-lines/proteomics_lfq/).<br>
 * Download `pquantR` folder from [this page](https://github.com/Douerww/pquantR/tree/main/pquant) and put it in a suitable working path.
 2. Run `app.R` in the folder, and you could run it in the following ways.<br>
 * Upload the data, choose the parameters of MSstats then submit.<br>
 3. We could see visualization of processed data and differentially abundant proteins.<br>
-![](https://github.com/Douerww/pquantR/blob/main/img/homePage.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/dataPreprocessPlots.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/MSstats-1.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/MSstats-2.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/interactivePlot.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/home.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/data-1.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/data-2.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/data-3.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/msstats-1.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/msstats-2.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/dynamic-1.png)
+![](https://github.com/Douerww/pquantR/blob/main/img/dynamic-2.png)
 
 
 ## Todo list
