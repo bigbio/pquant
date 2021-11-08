@@ -74,78 +74,110 @@ ui <- dashboardPage(
                                               label = "Start Preprocessing",
                                               icon = icon("play-circle"),
                                               style ="display: block; margin: 0 auto; width: 200px;color: black;"
-                                              )   
+                                              ),
+                                 br()
+                             ),
+                             
+                             
+                             menuItem("Data process plots",
+                                      br(),
+                                      helpText("Please wait until the data is preprocessed."),
+                                      br(),
+                                      menuItem("Profile & Condition plot",
+                                               br(),
+                                               uiOutput('initialData_profilecondition_selector'),
+                                               br(),
+                                               actionButton(inputId = "initialData_profilecondition_Render",
+                                                            label = "Render Plot",
+                                                            icon = icon("play-circle"),
+                                                            style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                               ),
+                                               br()
+                                      ),
+                                      br(),
+                                      menuItem("Quality control plot",
+                                               br(),
+                                               uiOutput('initialData_qualitycontrol_selector'),
+                                               br(),
+                                               actionButton(inputId = "initialData_qualitycontrol_Render",
+                                                            label = "Render Plot",
+                                                            icon = icon("play-circle"),
+                                                            style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                               ),
+                                               br()
+                                      ),
+                                      br()
                              )
-                             #tags$hr()
+                             
                          )
                          
                          
                          
-                         ),
+        ),
         
         
         # default method sidebar
         conditionalPanel(condition = "input.main_tabs == 'default_method_condition'",
                          br(),
                          sidebarMenu(
-                                # volcano sidebar
-                               menuItem("Volcano plot",
-                                         #tabName = 'default_method_volcano_show',
-                                         br(),
-                                         uiOutput('default_method_volcano_selector'),
-                                         br(),
-                                         actionButton(inputId = "default_method_volcano_Render",
-                                                      label = "Render Plot",
-                                                      icon = icon("play-circle"),
-                                                      style ="display: block; margin: 0 auto; width: 200px;color: black;"
-                                         ),
-                                         br()
+                               menuItem("Group comparison plots",
+                                        br(),
+                                        menuItem("Residual & Normal Q-Q plot",
+                                                 br(),
+                                                 uiOutput('default_method_residual_qq_selector'),
+                                                 br(),
+                                                 actionButton(inputId = "default_method_residual_qq_Render",
+                                                              label = "Render Plot",
+                                                              icon = icon("play-circle"),
+                                                              style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                                 ),
+                                                 br()
+                                        ),
+                                        br()
                                 ),
-                                
-                                # heatmap sidebar
-                               menuItem("Heatmap",
-                                         #tabName = 'default_method_heatmap_show',
-                                         br(),
-                                         actionButton(inputId = "default_method_heatmap_Render",
-                                                      label = "Render Plot",
-                                                      icon = icon("play-circle"),
-                                                      style ="display: block; margin: 0 auto; width: 200px;color: black;"
-                                         ),
-                                         br()
-                                ),
-                                
-                                # qc sidebar
-                               menuItem("QC plot",
-                                         #tabName = 'default_method_qc_show',
-                                         br(),
-                                         uiOutput('default_method_qc_selector'),
-                                         br(),
-                                         actionButton(inputId = "default_method_qc_Render",
-                                                      label = "Render Plot",
-                                                      icon = icon("play-circle"),
-                                                      style ="display: block; margin: 0 auto; width: 200px;color: black;"
-                                         )
-                                )
+                               
+                               menuItem("Model-based QC plots",
+                                        br(),
+                                        menuItem("Volcano plot",
+                                                 br(),
+                                                 uiOutput('default_method_volcano_selector'),
+                                                 br(),
+                                                 actionButton(inputId = "default_method_volcano_Render",
+                                                              label = "Render Plot",
+                                                              icon = icon("play-circle"),
+                                                              style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                                 ),
+                                                 br()
+                                        ),
+                                        br(),
+                                        menuItem("Heatmap",
+                                                 br(),
+                                                 actionButton(inputId = "default_method_heatmap_Render",
+                                                              label = "Render Plot",
+                                                              icon = icon("play-circle"),
+                                                              style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                                 ),
+                                                 br()
+                                        ),
+                                        br(),
+                                        menuItem("Comparison plot",
+                                                 br(),
+                                                 uiOutput('default_method_comparison_selector'),
+                                                 br(),
+                                                 actionButton(inputId = "default_method_comparison_Render",
+                                                              label = "Render Plot",
+                                                              icon = icon("play-circle"),
+                                                              style ="display: block; margin: 0 auto; width: 200px;color: black;"
+                                                 ),
+                                                 br()
+                                        ),
+                                        br()
+                               )
                          )
                          
                          
         ),
-        
-        # specific protein sidebar
-        conditionalPanel(condition = "input.main_tabs == 'specific_protein_condition'",
-                         br(),
-                         h5('Select a specific protein: '),
-                         br(),
-                         uiOutput('specific_protein_selector'),
-                         br(),
-                         actionButton(inputId = "specific_protein_Render",
-                                      label = "Render Plot",
-                                      icon = icon("play-circle"),
-                                      style ="display: block; margin: 0 auto; width: 200px;color: black;"
-                         ),
-                         br()
 
-        ),
         
         # dynamic volcano
         conditionalPanel(condition = "input.main_tabs == 'dynamic_volcano'",
@@ -198,80 +230,66 @@ ui <- dashboardPage(
             tabPanel(title = 'Data',
                      value = 'fileinput_condition',
                      fluidPage(
-                        fluidRow(
-                            column(10,
-                                DT::DTOutput("contents", width = '80%')
-                            )    
-                        
-                        )
+                       tabBox(# No title
+                         id = "initialData_tabbox", selected = "initialData_tabbox_data", width = 12,
+                         tabPanel(
+                           title = "Data", value = "initialData_tabbox_data",
+                           fluidRow(
+                             column(11,
+                                    DT::DTOutput("contents", width = '80%')
+                             )
+                           )),
+                         tabPanel(
+                           title = "Data process plots", value = "initialData_tabbox_plot",
+                           fluidRow(
+                             column(6,
+                                    plotOutput("initialData_profilePlot_out")),
+                             column(6,
+                                    plotOutput("initialData_qualitycontrolPlot_out"))
+                           ),
+                           br(),
+                           fluidRow(
+                             column(6,
+                                    plotOutput("initialData_conditionPlot_out"))
+                           )
+                         )
+                       )
                      )
+                     
             ),
-
+            
             
             # default method condition tab
             tabPanel(title = 'MSstats method',
                      value = 'default_method_condition',
-                     
-                     fluidPage(
-                          fluidRow(
-                              column(5,
-                                     plotOutput('default_method_volcano_out')
-                                     #downloadButton(outputId = "default_method_volcano_downloader", 
-                                     #                label = "Download Volcano plot",
-                                     #                style="color: black;")
-                              )
-                          ),
-                          
-                          br(),
-                          
-                          fluidRow(
-                              column(5,
-                                     plotOutput('default_method_heat_out')
-                                     #downloadButton(outputId = "default_method_heatmap_downloader", 
-                                     #                label = "Download Heatmap",
-                                     #                style="color: black;")
-                              )
-                          ),
-                          
-                          br(),
-                            
-                          fluidRow(
-                              column(5, 
-                                     #align="center",   # doesn't work
-                                     plotOutput('default_method_qc_out')
-                                     #downloadButton(outputId = "default_method_qc_downloader", 
-                                     #                label = "Download QC plot",
-                                     #                style="color: black;")
-                              )
-                          )
-
-                   
+                     tabBox(# No title
+                       id = "msstats_tabbox", selected = "msstats_tabbox_modelbased", width = 12,
+                       tabPanel(
+                         title = "Model-based QC plots", value = "msstats_tabbox_modelbased",
+                         fluidRow(
+                           column(6,
+                                  plotOutput("default_method_residualPlot_out")),
+                           column(6,
+                                  plotOutput("default_method_qqPlot_out"))
+                         )),
+                       tabPanel(
+                         title = "Group comparison plots", value = "msstats_tabbox_groupcomparison",
+                         fluidRow(
+                           column(6,
+                                  plotOutput("default_method_volcano_out")),
+                           column(6,
+                                  plotOutput("default_method_heat_out"))
+                         ),
+                         br(),
+                         fluidRow(
+                           column(6,
+                                  plotOutput("default_method_comparisonPlot_out"))
+                         )
+                       )
                      )
             ),
             
-            # specific protein tab
-            tabPanel(title = 'Specific protein',
-                     value = 'specific_protein_condition',
-                     
-                     fluidPage(
-                       fluidRow(
-                         column(6,
-                                plotOutput('specific_protein_qcplot_out')
-                         ),
-                         column(6,
-                                plotOutput('specific_protein_profileplot_out')
-                         ),
-                       ),
-                       
-                       br(),
-                       
-                       fluidRow(
-                         column(9,
-                                plotOutput('specific_protein_conditionplot_out')
-                         )
-                       )                      
-                     )
-            ),
+            
             
             # dynamic volcano tab
             tabPanel(title = 'Dynamic volcano',
@@ -335,7 +353,7 @@ ui <- dashboardPage(
 
 # Define server logic ----
 server <- function(input, output, session) {
-    options(shiny.maxRequestSize=1000*1024^2)
+    options(shiny.maxRequestSize=520*1024^2)
     
 
     # -------------input---------------
@@ -407,7 +425,7 @@ server <- function(input, output, session) {
       name[len2,1] <- sprintf('%s-%s', tmp[1,1], tmp[len2,1])
       
       row.names(ourMatrix) <- name
-      #----------End of creation-----------
+      #End of creation
       colnames(ourMatrix) <- ourCondition
       prePquant$DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
                                              data = prePquant$DDA2009.proposed,
@@ -418,6 +436,150 @@ server <- function(input, output, session) {
     
     
     
+
+    
+    ### ---initialData_tabbox_plot---
+    initialData_profilecondition_select <- reactive({
+      if(input$csvFile == 0) {
+        return(NULL)
+      }
+      else {
+        initialData_profilecondition_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+        selectInput(inputId = 'initialData_profilecondition_select_input',
+                    label = 'Options',
+                    choices = as.list(initialData_profilecondition_selector)
+        )
+      }
+    })
+    
+    initialData_qualitycontrol_select <- reactive({
+      if(input$csvFile == 0) {
+        return(NULL)
+      }
+      else {
+        tmp <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+        initialData_qualitycontrol_selector <- append('allonly', tmp, 1)
+        selectInput(inputId = 'initialData_qualitycontrol_select_input',
+                    label = 'Options',
+                    choices = as.list(initialData_qualitycontrol_selector)
+        )
+      }
+    })
+    
+    output$initialData_profilecondition_selector <- renderUI({
+      initialData_profilecondition_select()
+    })
+    
+    output$initialData_qualitycontrol_selector <- renderUI({
+      initialData_qualitycontrol_select()
+    })
+    
+    
+    #initialData_qualitycontrolPlot_out
+    initialData_qualitycontrolPlot <- reactive({
+      if(input$initialData_qualitycontrol_Render == 0) {
+        return(NULL)
+      }
+      else {
+        dataProcessPlots(data = prePquant$DDA2009.proposed, type="QCPlot",
+                         which.Protein=input$initialData_qualitycontrol_select_input,
+                         width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$initialData_qualitycontrolPlot_out <- renderPlot({
+      initialData_qualitycontrolPlot()
+    })
+    
+    #initialData_profilePlot_out
+    initialData_profilePlot <- reactive({
+      if(input$initialData_profilecondition_Render == 0) {
+        return(NULL)
+      }
+      else {
+        dataProcessPlots(data = prePquant$DDA2009.proposed, type="ProfilePlot",
+                         which.Protein=input$initialData_profilecondition_select_input,
+                         width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$initialData_profilePlot_out <- renderPlot({
+      initialData_profilePlot()
+    })
+    
+    #initialData_conditionPlot_out
+    initialData_conditionPlot <- reactive({
+      if(input$initialData_profilecondition_Render == 0) {
+        return(NULL)
+      }
+      else {
+        dataProcessPlots(data = prePquant$DDA2009.proposed, type="ConditionPlot",
+                         which.Protein=input$initialData_profilecondition_select_input,
+                         width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$initialData_conditionPlot_out <- renderPlot({
+      initialData_conditionPlot()
+    })
+    
+    
+    
+    ##### -----default method-----  
+    
+    ### model-based QC plots
+    default_method_residual_qq_select <- reactive({
+      if(input$csvFile == 0) {
+        return(NULL)
+      }
+      else {
+        default_method_residual_qq_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+        selectInput(inputId = 'default_method_residual_qq_select_input',
+                    label = 'Options',
+                    choices = as.list(default_method_residual_qq_selector)
+        )
+      }
+    })
+ 
+    output$default_method_residual_qq_selector <- renderUI({
+      default_method_residual_qq_select()
+    })
+ 
+       
+    #residual plot
+    default_method_residualPlot <- reactive({
+      if(input$default_method_residual_qq_Render == 0) {
+        return(NULL)
+      }
+      else {
+        modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="ResidualPlots",
+                          which.Protein=input$default_method_residual_qq_select_input,
+                          width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$default_method_residualPlot_out <- renderPlot({
+      default_method_residualPlot()
+    })
+    
+    #q-q plot (quantile-quantile)
+    default_method_qqPlot <- reactive({
+      if(input$default_method_residual_qq_Render == 0) {
+        return(NULL)
+      }
+      else {
+        modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="QQPlots",
+                          which.Protein=input$default_method_residual_qq_select_input,
+                          width=10, height=5, address=FALSE)
+      }
+    })
+    
+    output$default_method_qqPlot_out <- renderPlot({
+      default_method_qqPlot()
+    })
+    
+    
+    ### group comparison plots
     # default_method volcano plot
     default_method_volcano_plot <- reactive({
         if(input$default_method_volcano_Render == 0) {
@@ -467,111 +629,42 @@ server <- function(input, output, session) {
         default_method_heatmap_plot()
     })
     
-    
-    # default_method qc plot
-    default_method_qc_plot <- reactive({
-        if(input$default_method_qc_Render == 0) {
-            return(NULL)
-        }
-        else {
-            getPlot(inputdf(), flag = 'qc', selector = input$default_method_qc_input,
-                    prePquant$DDA2009.proposed, prePquant$DDA2009.TMP, prePquant$DDA2009.comparisons)
-        }
-    })
-    
-    default_method_qc_select <- reactive({
-        if(input$csvFile == 0) {
-            return(NULL)
-        }
-        else {
-            default_method_qc_selector <- getSelector(inputdf(), flag = 'qc',
-                                                      prePquant$DDA2009.proposed, prePquant$DDA2009.TMP)
-            selectInput(inputId = 'default_method_qc_input',
-                        label = 'Options',
-                        choices = as.list(default_method_qc_selector)
-            )
-            }
-    })
-    
-    output$default_method_qc_selector <- renderUI({
-        default_method_qc_select()
-    })
-    
-    output$default_method_qc_out <- renderPlot({
-        default_method_qc_plot()        
-    })
-    
-
-        
-    ### specific protein
-    output$specific_protein_selector <- renderUI({
-      specific_protein_select()
-    })
-    
-    specific_protein_select <- reactive({
+    #comparison plot
+    default_method_comparison_select <- reactive({
       if(input$csvFile == 0) {
         return(NULL)
       }
       else {
-        specific_protein_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
-        selectInput(inputId = 'specific_protein_select_input',
+        default_method_comparison_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+        selectInput(inputId = 'default_method_comparison_select_input',
                     label = 'Options',
-                    choices = as.list(specific_protein_selector)
+                    choices = as.list(default_method_comparison_selector)
         )
       }
     })
+  
+    output$default_method_comparison_selector <- renderUI({
+      default_method_comparison_select()
+    })
     
     
-    #specific_protein_qcplot_out
-    specific_protein_qc_plot <- reactive({
-      if(input$specific_protein_Render == 0) {
+    default_method_comparisonPlot <- reactive({
+      if(input$default_method_comparison_Render == 0) {
         return(NULL)
       }
       else {
-        dataProcessPlots(data = prePquant$DDA2009.proposed, type="QCPlot",
-                         which.Protein=input$specific_protein_select_input,
-                         width=10, height=5, address=FALSE)
+        groupComparisonPlots(data = prePquant$DDA2009.comparisons$ComparisonResult, type="ComparisonPlot",
+                             which.Protein=input$default_method_comparison_select_input,
+                             width=10, height=5, address=FALSE)
       }
     })
     
-    output$specific_protein_qcplot_out <- renderPlot({
-      specific_protein_qc_plot()
-    })
-    
-    #specific_protein_profileplot_out
-    specific_protein_profileplot_plot <- reactive({
-      if(input$specific_protein_Render == 0) {
-        return(NULL)
-      }
-      else {
-        dataProcessPlots(data = prePquant$DDA2009.proposed, type="ProfilePlot",
-                         which.Protein=input$specific_protein_select_input,
-                         width=10, height=5, address=FALSE)
-      }
-    })
-    
-    output$specific_protein_profileplot_out <- renderPlot({
-      specific_protein_profileplot_plot()
-    })
-    
-    #specific_protein_conditionplot_out
-    specific_protein_conditionplot_plot <- reactive({
-      if(input$specific_protein_Render == 0) {
-        return(NULL)
-      }
-      else {
-        dataProcessPlots(data = prePquant$DDA2009.proposed, type="ConditionPlot",
-                         which.Protein=input$specific_protein_select_input,
-                         width=10, height=5, address=FALSE)
-      }
-    })
-    
-    output$specific_protein_conditionplot_out <- renderPlot({
-      specific_protein_conditionplot_plot()
+    output$default_method_comparisonPlot_out <- renderPlot({
+      default_method_comparisonPlot()
     })
     
     
-    
+ 
     
     ### ---dynamic volcano---
     
