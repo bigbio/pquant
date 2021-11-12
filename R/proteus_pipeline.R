@@ -2,10 +2,10 @@
 
 source("R/functions.R")
 
-project_id <- 'PXD002137'
+project_id <- 'UPS1'
 output_dir <- paste0("output/", "proteus-", project_id)
 
-path_quant_data <- "/Users/yperez/Downloads/out_msstats-PXD002137.csv"
+path_quant_data <- "datasets/out_msstats.csv"
 
 # format quant data to Proteus
 path_proteus <- quantdata2proteus(path_quant_data)
