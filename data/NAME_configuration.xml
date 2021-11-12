@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+	<Configuration experimentType="rnaseq_mrna_differential" r_data="0">
+		<analytics>
+			<assay_groups>
+				<assay_group id="g1" label="Breast cancer; adjacent breast tissues">
+					<assay>PXD012431-Sample-3</assay>
+					<assay>PXD012431-Sample-3</assay>
+					<assay>PXD012431-Sample-3</assay>
+					<assay>PXD012431-Sample-6</assay>
+					<assay>PXD012431-Sample-6</assay>
+					<assay>PXD012431-Sample-6</assay>
+					<assay>PXD012431-Sample-9</assay>
+					<assay>PXD012431-Sample-9</assay>
+					<assay>PXD012431-Sample-9</assay>
+					<assay>PXD012431-Sample-12</assay>
+					<assay>PXD012431-Sample-12</assay>
+					<assay>PXD012431-Sample-12</assay>
+					<assay>PXD012431-Sample-16</assay>
+					<assay>PXD012431-Sample-16</assay>
+					<assay>PXD012431-Sample-16</assay>
+					<assay>PXD012431-Sample-20</assay>
+					<assay>PXD012431-Sample-20</assay>
+					<assay>PXD012431-Sample-20</assay>
+				</assay_group>
+				<assay_group id="g2" label="Breast cancer; axillary metastatic lymph nodes tissues">
+					<assay>PXD012431-Sample-1</assay>
+					<assay>PXD012431-Sample-1</assay>
+					<assay>PXD012431-Sample-1</assay>
+					<assay>PXD012431-Sample-13</assay>
+					<assay>PXD012431-Sample-13</assay>
+					<assay>PXD012431-Sample-13</assay>
+					<assay>PXD012431-Sample-17</assay>
+					<assay>PXD012431-Sample-17</assay>
+					<assay>PXD012431-Sample-17</assay>
+					<assay>PXD012431-Sample-21</assay>
+					<assay>PXD012431-Sample-21</assay>
+					<assay>PXD012431-Sample-21</assay>
+				</assay_group>
+				<assay_group id="g3" label="Breast cancer; non-tumor contralateral breast tissues">
+					<assay>PXD012431-Sample-4</assay>
+					<assay>PXD012431-Sample-4</assay>
+					<assay>PXD012431-Sample-4</assay>
+					<assay>PXD012431-Sample-7</assay>
+					<assay>PXD012431-Sample-7</assay>
+					<assay>PXD012431-Sample-7</assay>
+					<assay>PXD012431-Sample-10</assay>
+					<assay>PXD012431-Sample-10</assay>
+					<assay>PXD012431-Sample-10</assay>
+					<assay>PXD012431-Sample-14</assay>
+					<assay>PXD012431-Sample-14</assay>
+					<assay>PXD012431-Sample-14</assay>
+					<assay>PXD012431-Sample-18</assay>
+					<assay>PXD012431-Sample-18</assay>
+					<assay>PXD012431-Sample-18</assay>
+					<assay>PXD012431-Sample-22</assay>
+					<assay>PXD012431-Sample-22</assay>
+					<assay>PXD012431-Sample-22</assay>
+				</assay_group>
+				<assay_group id="g4" label="Breast cancer; primary breast tumor tissues">
+					<assay>PXD012431-Sample-2</assay>
+					<assay>PXD012431-Sample-2</assay>
+					<assay>PXD012431-Sample-2</assay>
+					<assay>PXD012431-Sample-5</assay>
+					<assay>PXD012431-Sample-5</assay>
+					<assay>PXD012431-Sample-5</assay>
+					<assay>PXD012431-Sample-8</assay>
+					<assay>PXD012431-Sample-8</assay>
+					<assay>PXD012431-Sample-8</assay>
+					<assay>PXD012431-Sample-11</assay>
+					<assay>PXD012431-Sample-11</assay>
+					<assay>PXD012431-Sample-11</assay>
+					<assay>PXD012431-Sample-15</assay>
+					<assay>PXD012431-Sample-15</assay>
+					<assay>PXD012431-Sample-15</assay>
+					<assay>PXD012431-Sample-19</assay>
+					<assay>PXD012431-Sample-19</assay>
+					<assay>PXD012431-Sample-19</assay>
+					<assay>PXD012431-Sample-23</assay>
+					<assay>PXD012431-Sample-23</assay>
+					<assay>PXD012431-Sample-23</assay>
+				</assay_group>
+			</assay_groups>
+			<contrasts>
+				<contrast id="g2_g1" cttv_primary="1">
+					<name>'adjacent breast tissues' vs 'primary breast tumor tissues' in 'Breast cancer'</name>
+					<reference_assay_group>g2</reference_assay_group>
+					<test_assay_group>g1</test_assay_group>
+				</contrast>
+				<contrast id="g4_g3" cttv_primary="1">
+					<name>'non-tumor contralateral breast tissues' vs 'axillary metastatic lymph nodes tissues' in 'Breast cancer'</name>
+					<reference_assay_group>g4</reference_assay_group>
+					<test_assay_group>g3</test_assay_group>
+				</contrast>
+			</contrasts>
+		</analytics>
+	</Configuration>

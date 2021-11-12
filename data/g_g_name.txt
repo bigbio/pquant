@@ -1,0 +1,1 @@
+adjacent breast tissues-primary breast tumor tissues,primary breast tumor tissues-adjacent breast tissues,non-tumor contralateral breast tissues-axillary metastatic lymph nodes tissues,axillary metastatic lymph nodes tissues-non-tumor contralateral breast tissues,g2_g1,g2_g1,g4_g3,g4_g3
