@@ -1,7 +1,7 @@
 # get shiny server plus tidyverse packages image
 FROM rocker/shiny-verse:latest
 
-maintainer Douer douerww@gmail.com
+MAINTAINER Douer douerww@gmail.com
 
 # system libraries of general use
 RUN apt-get update && apt-get install -y \
@@ -37,7 +37,7 @@ COPY shiny-server.sh /usr/bin/
 COPY shiny-server.conf  /etc/shiny-server/shiny-server.conf
 
 # copy the contents of app folder to image
-COPY ./pquantr /srv/shiny-server/pquantr
+COPY pquantr /srv/shiny-server/pquantr
 
 # select port
 EXPOSE 3838
