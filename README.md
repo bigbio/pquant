@@ -32,14 +32,15 @@ $> source build.sh
 2. Run `app.R` in the folder, and you could run it in the following ways.<br>
 * Upload the data, choose the parameters of MSstats then submit.<br>
 3. We could see visualization of processed data and differentially abundant proteins.<br>
-![](https://github.com/Douerww/pquantR/blob/main/img/home.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/data-1.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/data-2.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/data-3.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/msstats-1.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/msstats-2.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/dynamic-1.png)
-![](https://github.com/Douerww/pquantR/blob/main/img/dynamic-2.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/home.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/data-1.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/data-2.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/data-3.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/data-4.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/msstats-1.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/msstats-2.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/dynamic-1.png)
+![](https://github.com/Douerww/pquantR/blob/main/imgs/dynamic-2.png)
 
 
 ## Todo list
