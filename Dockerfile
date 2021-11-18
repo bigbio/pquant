@@ -1,7 +1,7 @@
 # get shiny server plus tidyverse packages image
 FROM rocker/shiny-verse:latest
 
-MAINTAINER Douer douerww@gmail.com
+maintainer Douer douerww@gmail.com
 
 # system libraries of general use
 RUN apt-get update && apt-get install -y \
@@ -24,8 +24,10 @@ RUN apt-get update && apt-get install -y \
     vim
 
 # Install library
-RUN R -e "install.packages(c('shiny','shinydashboard','DT','pheatmap','rhandsontable','shinyjs','shinyWidgets','ggplot2','tidyverse','IDPmisc','devtools','htmlwidgets','log4r','gplots','RcppArmadillo'))"
+RUN R -e "install.packages(c('shiny','shinydashboard','DT','pheatmap','rhandsontable','shinyjs','shinyWidgets','ggplot2','tidyverse','IDPmisc','devtools','htmlwidgets','log4r','gplots','RcppArmadillo','data.table','dplyr','tidyr'))"
 RUN R -e "devtools::install_github('Vitek-Lab/MSstats')"
+RUN R -e "BiocManager::install('AnnotationDbi')"
+RUN R -e "BiocManager::install('org.Hs.eg.db')"
 
 
 ### --------------------------------------
@@ -37,7 +39,7 @@ COPY shiny-server.sh /usr/bin/
 COPY shiny-server.conf  /etc/shiny-server/shiny-server.conf
 
 # copy the contents of app folder to image
-COPY pquantr /srv/shiny-server/pquantr
+COPY ./pquantr /srv/shiny-server/pquantr
 
 # select port
 EXPOSE 3838
