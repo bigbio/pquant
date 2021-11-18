@@ -45,6 +45,4 @@ $> source build.sh
 
 ## Todo list
 1. Add download function, including PDF,PNG format, etc.<br>
-2. Other interactive plots.<br>
-3. Protein accession -> gene accession.<br>
-4. Portein accessions with expression values and connect to REACTOME.<br>
+2. Other interactive plots.
