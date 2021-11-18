@@ -34,23 +34,15 @@ dynamic_replicateTable <- function(tab, input, pdat, max_points) {
   }, width = "80px")
 }
 
-dynamic_significanceTable1 <- function(tab, res, input) {
+dynamic_significanceTable <- function(tab, res, input) {
   renderTable({
     sel <- dynamic_selectProtein(tab, input)
-    if(!is.null(sel) && length(sel) == 1) {
+    if(!is.null(sel)) {
       df <- data.frame(
         `Protein`=sprintf("%s", res$Protein[sel]),
+        `GeneID`=sprintf("%s", res$ENTREZID[sel]),
+        `GeneName`=sprintf("%s", res$GENENAME[sel]),
         `Log2FC`=sprintf("%.2g", res$log2FC[sel]),
-        check.names = FALSE)
-      df
-    }
-  }, width = "100px")
-}
-dynamic_significanceTable2 <- function(tab, res, input) {
-  renderTable({
-    sel <- dynamic_selectProtein(tab, input)
-    if(!is.null(sel) && length(sel) == 1) {
-      df <- data.frame(
         `P-value`=sprintf("%.2g", res$pvalue[sel]),
         `adjusted P-value`=sprintf("%.2g", res$adj.pvalue[sel]),
         check.names = FALSE)
