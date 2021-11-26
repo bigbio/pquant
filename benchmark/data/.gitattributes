@@ -1,3 +1,0 @@
-new_out_msstats.csv filter=lfs diff=lfs merge=lfs -text
-out.mzTab filter=lfs diff=lfs merge=lfs -text
-out_msstats.csv filter=lfs diff=lfs merge=lfs -text
