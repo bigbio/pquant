@@ -28,6 +28,8 @@ RUN R -e "install.packages(c('shiny','shinydashboard','DT','pheatmap','rhandsont
 RUN R -e "devtools::install_github('Vitek-Lab/MSstats')"
 RUN R -e "BiocManager::install('AnnotationDbi')"
 RUN R -e "BiocManager::install('org.Hs.eg.db')"
+RUN R -e "BiocManager::install('org.Sc.sgd.db')"
+RUN R -e "BiocManager::install('org.Rn.eg.db')"
 
 
 ### --------------------------------------

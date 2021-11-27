@@ -15,9 +15,11 @@ library(tidyverse)
 library(IDPmisc)
 library(data.table)
 library(dplyr)
-library(org.Hs.eg.db)
 library(tidyr)
 
+library(org.Hs.eg.db)
+library(org.Sc.sgd.db)
+library(org.Rn.eg.db)
 
 # Source getPlots functions
 source("./app/getSelector.R")
@@ -391,7 +393,6 @@ server <- function(input, output, session) {
     options(shiny.maxRequestSize=520*1024^2)
   
     prePquant <- reactiveValues(DDA2009.proposed = NULL,
-                                DDA2009.TMP = NULL,
                                 DDA2009.comparisons = NULL,
                                 inputData_rdata_out_msstats = NULL,
                                 inputData_URL_out_msstats = NULL)
@@ -413,7 +414,8 @@ server <- function(input, output, session) {
                                   inputData_state = NULL,
                                   inputData_rdata = NULL,
                                   inputData_URL_state = NULL,
-                                  preprocess_judge = 0)
+                                  preprocess_judge = 0,
+                                  db_type = NULL)
 
     # -------------input---------------
     
@@ -473,8 +475,8 @@ server <- function(input, output, session) {
         #print(names(env()))
         #[1] "inputData_rdata_out_msstats" "DDA2009.comparisons"         "DDA2009.TMP"                 "DDA2009.proposed"
         prePquant$inputData_rdata_out_msstats <- env()[[names(env())[1]]]
-        prePquant$DDA2009.proposed <- env()[[names(env())[4]]]
-        prePquant$DDA2009.TMP <- env()[[names(env())[3]]]
+        prePquant$DDA2009.proposed <- env()[[names(env())[3]]]
+        #prePquant$DDA2009.TMP <- env()[[names(env())[3]]]
         prePquant$DDA2009.comparisons <- env()[[names(env())[2]]]
         
         progress$set(message = "Load over.", value = 1)
@@ -568,167 +570,181 @@ server <- function(input, output, session) {
       
         fileData <- inputdf()
         
-        if(sum("Fraction" == colnames(fileData)) == 1 & input$user_choose_summaryMethod == 'TMP')
-        {
+        species <- unlist(lapply(strsplit(as.character(fileData[1,1]), "\\_"), "[", 2))
+        if(species == "HUMAN"){
+            db_type = org.Hs.eg.db
+        }else if(species == "YEAST"){
+            db_type = org.Sc.sgd.db
+        }else if(species == "RAT"){
+            db_type = org.Rn.eg.db
+        }else{
+            dataControl$db_type = "out"
+        }
+
+        if(!(is.null(dataControl$db_type))){
             sendSweetAlert(
                 session = session,
                 title = "Warning",
-                text = "Your data is not suitable for TMP summary method, please consider switching to 'linear method'(low precision) or changing data.",
+                text = "Currently, only 'Human', 'Yeast', and 'Rat' species are supported.",
                 type = "warning", 
                 closeOnClickOutside = TRUE,
                 width = 400
             )
         }else{
-            ### progress function
-          
-            sendSweetAlert(
-                session = session,
-                title = "Start",
-                text = "Your data is being preprocessed, please wait until done to the next step.",
-                type = "success", 
-                closeOnClickOutside = TRUE,
-                width = 400
-            )
-            
-            progress <- shiny::Progress$new()
-            on.exit(progress$close())
-            
-            progress$set(message = "Begin to preprocess data, please wait...", value = 0.1)
-            
-            progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
-            prePquant$DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
-                                                               logTrans = as.numeric(input$user_choose_logTrans),
-                                                               normalization = input$user_choose_normalization,
-                                                               summaryMethod = input$user_choose_summaryMethod,
-                                                               maxQuantileforCensored = input$user_choose_maxQuantileforCensored,
-                                                               censoredInt = "NA",
-                                                               MBimpute = TRUE,
-                                                               use_log_file = FALSE)
-            
-            progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
-            prePquant$DDA2009.TMP <- MSstats::dataProcess(raw = fileData,
-                                                          logTrans = as.numeric(input$user_choose_logTrans),
-                                                          normalization = input$user_choose_normalization,
-                                                          summaryMethod = input$user_choose_summaryMethod,
-                                                          maxQuantileforCensored = input$user_choose_maxQuantileforCensored,
-                                                          censoredInt = NULL,
-                                                          MBimpute = FALSE,
-                                                          use_log_file = FALSE)
-            
-            progress$set(message = "Begin to generate group comparison, please wait...", value = 0.6)
-            # Automatically create the manually created matrix in MSstats, user manual p23
-            len <- length(levels(prePquant$DDA2009.TMP$FeatureLevelData$GROUP))
-            
-            ourMatrix <- matrix(c(0:0),nrow=len,ncol=len)
-            diag(ourMatrix) = -1
-            for(i in 1:len-1){
-                ourMatrix[i,i+1] = 1
-            }
-            ourMatrix[len,1] = 1
-            
-            ourCondition <- levels(prePquant$DDA2009.TMP$ProteinLevelData$GROUP)
-            len2 <- length(ourCondition)
-            tmp <- matrix(ourCondition, nr=len2, nc=1)
-            name <- matrix(nr=len2, nc=1)
-            for(i in 1:len2-1){
-                name[i,1] <- sprintf('%s-%s', tmp[i+1,1], tmp[i,1])
-            }
-            name[len2,1] <- sprintf('%s-%s', tmp[1,1], tmp[len2,1])
-            
-            row.names(ourMatrix) <- name
-            #End of creation
-            colnames(ourMatrix) <- ourCondition
-            prePquant$DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
-                                                             data = prePquant$DDA2009.proposed,
-                                                             use_log_file = FALSE)
-                   
-            progress$set(message = "Begin to convert ID, please wait...", value = 0.8)
-            tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")    # type: list
-            tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
-            tmp <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
-            
-            for(i in array(1:length(colnames(tmp_df)))){
-                tmp[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
-            }
-    
-            mapping_geneid <- data.frame(ProteinName = tmp[,1])
-            mapping_genename <- data.frame(ProteinName = tmp[,1])
-            for(i in array(1:length(colnames(tmp_df)))){
-                uniKeys <- as.character(tmp[,i])
+            if(sum("Fraction" == colnames(fileData)) == 1 & input$user_choose_summaryMethod == 'TMP')
+            {
+                sendSweetAlert(
+                    session = session,
+                    title = "Warning",
+                    text = "Your data is not suitable for TMP summary method, please consider switching to 'linear method'(low precision) or changing data.",
+                    type = "warning", 
+                    closeOnClickOutside = TRUE,
+                    width = 400
+                )
+            }else{
+                ### progress function
+              
+                sendSweetAlert(
+                    session = session,
+                    title = "Start",
+                    text = "Your data is being preprocessed, please wait until done to the next step.",
+                    type = "success", 
+                    closeOnClickOutside = TRUE,
+                    width = 400
+                )
                 
-                tmp_geneid <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
-                tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
-                tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
-                tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
-                mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
+                progress <- shiny::Progress$new()
+                on.exit(progress$close())
                 
-                tmp_genename <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=uniKeys, column="SYMBOL", keytype="UNIPROT")
-                tmp_genename <- data.frame(matrix(lapply(tmp_genename, as.character)))
-                tmp_genename <- unlist(lapply(tmp_genename[,1],function(x) if(identical(x,character(0))) NA else x))
-                tmp_genename <- data.frame("GENENAME"=tmp_genename)
-                mapping_genename <- cbind(mapping_genename, tmp_genename)
-            }
+                progress$set(message = "Begin to preprocess data, please wait...", value = 0.1)
+                
+                progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
+                prePquant$DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
+                                                                   logTrans = as.numeric(input$user_choose_logTrans),
+                                                                   normalization = input$user_choose_normalization,
+                                                                   summaryMethod = input$user_choose_summaryMethod,
+                                                                   maxQuantileforCensored = input$user_choose_maxQuantileforCensored,
+                                                                   censoredInt = "NA",
+                                                                   MBimpute = TRUE,
+                                                                   use_log_file = FALSE)
+                
+                progress$set(message = "Begin to generate group comparison, please wait...", value = 0.5)
+                # Automatically create the manually created matrix in MSstats, user manual p23
+                len <- length(levels(prePquant$DDA2009.proposed$FeatureLevelData$GROUP))
+                
+                tmp <- t(combn(len,2))
+                matrix_len = length(t(combn(len,2))) / 2
+                
+                ourMatrix <- matrix(c(0:0),nrow=matrix_len,ncol=len)
+                
+                for(i in 1:matrix_len){
+                  ourMatrix[i, tmp[i]] = -1
+                  ourMatrix[i, tmp[i + matrix_len]] = 1
+                }
+                
+                ourCondition <- levels(prePquant$DDA2009.proposed$ProteinLevelData$GROUP)
+                tmp_name <- matrix(ourCondition, nr=len, nc=1)
+                name <- matrix(nr=matrix_len, nc=1)
+                for(i in 1:matrix_len){
+                  name[i,1] <- sprintf('%s-%s', tmp_name[tmp[i+matrix_len]], tmp_name[tmp[i]])
+                }
+                row.names(ourMatrix) <- name
+                
+                #End of creation
+                colnames(ourMatrix) <- ourCondition
+                prePquant$DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
+                                                                 data = prePquant$DDA2009.proposed,
+                                                                 use_log_file = FALSE)
+                       
+                progress$set(message = "Begin to convert ID, please wait...", value = 0.8)
+                tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")    # type: list
+                tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
+                tmp <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
+                for(i in array(1:length(colnames(tmp_df)))){
+                    tmp[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
+                }
+        
+                mapping_geneid <- data.frame(ProteinName = tmp[,1])
+                mapping_genename <- data.frame(ProteinName = tmp[,1])
     
-            mapping_geneid <- mapping_geneid[,-1]
-            mapping_genename <- mapping_genename[,-1]
-            cols_ENTREZID = "ENTREZID"
-            cols_GENENAME = "GENENAME"
-            for(i in array(1:(length(colnames(mapping_geneid))-1))){
-                cols_ENTREZID <- cols_ENTREZID %>% append(paste("ENTREZID", ".", i, sep = ""))
-                cols_GENENAME <- cols_GENENAME %>% append(paste("GENENAME", ".", i, sep = ""))
-            }
-    
-            mapping_geneid <- tidyr::unite(mapping_geneid, "ENTREZID", cols_ENTREZID, sep=";", na.rm=TRUE)
-            mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
-    
-            prePquant$DDA2009.comparisons$ComparisonResult$ENTREZID <- mapping_geneid$ENTREZID
-            prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
-    
-            ###
-            
-            dataControl$preprocess_judge <- 1
-            
-            progress$set(message = "Preprocessing is over.", value = 1)
-            
-            if(input$SaveProjectDataControl == FALSE){
-                disable("start_preprocess")
-            }
-            
-            
-            observeEvent(input$start_preprocess, {
-                if((input$SaveProjectDataControl == TRUE) & dataControl$preprocess_judge == 1){
-                    sendSweetAlert(
-                        session = session,
-                        title = "Start",
-                        text = "Start to save data to local",
-                        type = "success", 
-                        closeOnClickOutside = TRUE,
-                        width = 400
-                    )
+                for(i in array(1:length(colnames(tmp_df)))){
+                    uniKeys <- as.character(tmp[,i])
                     
-                    progress <- shiny::Progress$new()
-                    on.exit(progress$close())
+                    #tmp_geneid <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
+                    tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
+                    tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
+                    tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
+                    tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
+                    mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
                     
-                    DDA2009.proposed <- isolate(prePquant$DDA2009.proposed)
-                    DDA2009.TMP <- isolate(prePquant$DDA2009.TMP)
-                    DDA2009.comparisons <- isolate(prePquant$DDA2009.comparisons)
-                    
-                  
-                    projectpathname <- paste(input$SaveProjectFolderPath, "/", input$SaveProjectDataName, sep = "")
-                    dir.create(projectpathname)
-                    
-                    progress$set(message = "Begin to save data, please wait...", value = 0.5)
-                    
-                    inputData_rdata_out_msstats <- inputdf()
-                    
-                    save(DDA2009.proposed, DDA2009.TMP, DDA2009.comparisons, inputData_rdata_out_msstats,
-                         file = paste(projectpathname,"/", "DDA2009.RData", sep = ""))
-                    
-                    progress$set(message = "Save over.", value = 1)
-                    
+                    #tmp_genename <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=uniKeys, column="SYMBOL", keytype="UNIPROT")
+                    tmp_genename <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
+                    tmp_genename <- data.frame(matrix(lapply(tmp_genename, as.character)))
+                    tmp_genename <- unlist(lapply(tmp_genename[,1],function(x) if(identical(x,character(0))) NA else x))
+                    tmp_genename <- data.frame("GENENAME"=tmp_genename)
+                    mapping_genename <- cbind(mapping_genename, tmp_genename)
+                }
+        
+                mapping_geneid <- mapping_geneid[,-1]
+                mapping_genename <- mapping_genename[,-1]
+                cols_ENTREZID = "ENTREZID"
+                cols_GENENAME = "GENENAME"
+                for(i in array(1:(length(colnames(mapping_geneid))-1))){
+                    cols_ENTREZID <- cols_ENTREZID %>% append(paste("ENTREZID", ".", i, sep = ""))
+                    cols_GENENAME <- cols_GENENAME %>% append(paste("GENENAME", ".", i, sep = ""))
+                }
+        
+                mapping_geneid <- tidyr::unite(mapping_geneid, "ENTREZID", cols_ENTREZID, sep=";", na.rm=TRUE)
+                mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
+        
+                prePquant$DDA2009.comparisons$ComparisonResult$ENTREZID <- mapping_geneid$ENTREZID
+                prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
+        
+                ###
+                
+                dataControl$preprocess_judge <- 1
+                
+                progress$set(message = "Preprocessing is over.", value = 1)
+                
+                if(input$SaveProjectDataControl == FALSE){
                     disable("start_preprocess")
                 }
-            })
+                
+                
+                observeEvent(input$start_preprocess, {
+                    if((input$SaveProjectDataControl == TRUE) & dataControl$preprocess_judge == 1){
+                        sendSweetAlert(
+                            session = session,
+                            title = "Start",
+                            text = "Start to save data to local",
+                            type = "success", 
+                            closeOnClickOutside = TRUE,
+                            width = 400
+                        )
+                        
+                        progress <- shiny::Progress$new()
+                        on.exit(progress$close())
+                        
+                        DDA2009.proposed <- isolate(prePquant$DDA2009.proposed)
+                        DDA2009.comparisons <- isolate(prePquant$DDA2009.comparisons)
+                        
+                      
+                        projectpathname <- paste(input$SaveProjectFolderPath, "/", input$SaveProjectDataName, sep = "")
+                        dir.create(projectpathname)
+                        
+                        progress$set(message = "Begin to save data, please wait...", value = 0.5)
+                        
+                        inputData_rdata_out_msstats <- inputdf()
+                        
+                        save(DDA2009.proposed, DDA2009.comparisons, inputData_rdata_out_msstats,
+                             file = paste(projectpathname,"/", "DDA2009.RData", sep = ""))
+                        
+                        progress$set(message = "Save over.", value = 1)
+                        
+                        disable("start_preprocess")
+                    }
+                })
+            }
         }
     })
    
@@ -741,6 +757,7 @@ server <- function(input, output, session) {
         dataControl$inputData_URL_state <- NULL
         dataControl$inputData_state <- NULL
         dataControl$inputData_rdata <- NULL
+        dataControl$db_type <- NULL
         reset("download_name")
         
         reset("SaveProjectDataControl")
@@ -748,7 +765,6 @@ server <- function(input, output, session) {
         reset("SaveProjectFolderPath")
         
         prePquant$DDA2009.proposed <- NULL
-        prePquant$DDA2009.TMP <- NULL
         prePquant$DDA2009.comparisons <- NULL
         prePquant$inputData_rdata_out_msstats <- NULL
         prePquant$inputData_URL_out_msstats <- NULL
@@ -764,7 +780,6 @@ server <- function(input, output, session) {
         dataControl$annoStart <- 0
         dataControl$annoSubmit <- 0
         dataControl$preprocess_judge <- 0
-        #dataControl$all_start <- 0
   
         volcanoLive$pdat <- NULL
         volcanoLive$res <- NULL
@@ -915,7 +930,7 @@ server <- function(input, output, session) {
         }
         else {
             default_method_vol_selector <- getSelector(inputdf(), flag = 'volcano',
-                                                       prePquant$DDA2009.proposed, prePquant$DDA2009.TMP)
+                                                       prePquant$DDA2009.proposed)
             selectInput(inputId = 'default_method_volcano_input',
                         label = 'Options',
                         choices = as.list(default_method_vol_selector))
@@ -1242,7 +1257,7 @@ server <- function(input, output, session) {
         }
         else {
             dynamic_vol_selector <- getSelector(inputdf(), flag = 'volcano',
-                                                       prePquant$DDA2009.proposed, prePquant$DDA2009.TMP)
+                                                       prePquant$DDA2009.proposed)
             selectInput(inputId = 'dynamic_volcano_input',
                         label = 'Options',
                         choices = as.list(dynamic_vol_selector))
@@ -1271,8 +1286,6 @@ server <- function(input, output, session) {
         rownames(volcanoLive$res) <- c(1:nrow(volcanoLive$res))
         
         progress$set(message = "Preprocessing is over.", value = 1)
-        
-        res <- isolate(volcanoLive$res)
     })
   
     
