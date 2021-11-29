@@ -472,11 +472,9 @@ server <- function(input, output, session) {
         progress$set(message = "Begin to load data, please wait...", value = 0.5)
         
         env <- reactiveFileReader(1000, session, input$inputData$datapath, LoadToEnvironment)
-        #print(names(env()))
-        #[1] "inputData_rdata_out_msstats" "DDA2009.comparisons"         "DDA2009.TMP"                 "DDA2009.proposed"
+        #print(names(env()))  [1] "inputData_rdata_out_msstats" "DDA2009.comparisons"         "DDA2009.TMP"                 "DDA2009.proposed"
         prePquant$inputData_rdata_out_msstats <- env()[[names(env())[1]]]
         prePquant$DDA2009.proposed <- env()[[names(env())[3]]]
-        #prePquant$DDA2009.TMP <- env()[[names(env())[3]]]
         prePquant$DDA2009.comparisons <- env()[[names(env())[2]]]
         
         progress$set(message = "Load over.", value = 1)
@@ -526,7 +524,6 @@ server <- function(input, output, session) {
     })
     
     observe({
-      #if((input$start_preprocess == 0) & (input$rdataFile_submit == 0 此处待改成判断URL是否点击)){
       if(input$start_preprocess == 0 & is.null(dataControl$inputData_rdata)){
             disable("initialData_profilecondition_Render")
             disable("initialData_qualitycontrol_Render")
@@ -670,14 +667,12 @@ server <- function(input, output, session) {
                 for(i in array(1:length(colnames(tmp_df)))){
                     uniKeys <- as.character(tmp[,i])
                     
-                    #tmp_geneid <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
                     tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
                     tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
                     tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
                     tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
                     mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
                     
-                    #tmp_genename <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=uniKeys, column="SYMBOL", keytype="UNIPROT")
                     tmp_genename <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
                     tmp_genename <- data.frame(matrix(lapply(tmp_genename, as.character)))
                     tmp_genename <- unlist(lapply(tmp_genename[,1],function(x) if(identical(x,character(0))) NA else x))
@@ -1098,7 +1093,6 @@ server <- function(input, output, session) {
     
     # Proteus: create a peptide & protein dataset
     observeEvent(input$submit_anno, {
-      #if(input$start_preprocess == 0 & input$rdataFile_submit == 0 此处要改成判断上传的是否是RData){
       if(input$start_preprocess == 0 & is.null(dataControl$inputData_rdata)){
           sendSweetAlert(
               session = session,
