@@ -259,7 +259,7 @@ ui <- dashboardPage(
                                                           br(),br(),br(),
                                                           div(img(src = 'pipeline.svg', width = '50%'), style="text-align: center;",),
                                                           br(),br(),br(),
-                                                          h4("Data not ready?", a(href="./data/out_msstats_example.csv", download="out_msstats_example", "Get demo data here"))),
+                                                          h4("Data not ready?", a(href="./data/out_msstats_example.csv", download="out_msstats_example.csv", "Get demo data here"))),
                                        )
                               ),
                       
