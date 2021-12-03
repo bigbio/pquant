@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y \
     vim
 
 # Install library
-RUN R -e "install.packages(c('shiny','shinydashboard','DT','pheatmap','rhandsontable','shinyjs','shinyWidgets','ggplot2','tidyverse','IDPmisc','devtools','htmlwidgets','log4r','gplots','RcppArmadillo','data.table','dplyr','tidyr'))"
+RUN R -e "install.packages(c('shinydashboard','DT','pheatmap','shinyjs','shinyWidgets','IDPmisc','devtools','htmlwidgets','log4r','gplots','RcppArmadillo','BiocManager','reshape2','checkmate','lme4','ggrepel'),repos='http://cran.us.r-project.org')"
+RUN R -e "install.packages('rhandsontable')"
 RUN R -e "devtools::install_github('Vitek-Lab/MSstats')"
 RUN R -e "BiocManager::install('AnnotationDbi')"
 RUN R -e "BiocManager::install('org.Hs.eg.db')"

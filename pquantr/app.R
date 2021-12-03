@@ -567,7 +567,8 @@ server <- function(input, output, session) {
       
         fileData <- inputdf()
         
-        species <- unlist(lapply(strsplit(as.character(fileData[1,1]), "\\_"), "[", 2))
+        len <- length(unlist(lapply(strsplit(as.character(fileData[1,1]), "\\_"), "[")))
+        species <- unlist(lapply(strsplit(as.character(fileData[1,1]), "\\_"), "[", len))
         if(species == "HUMAN"){
             db_type = org.Hs.eg.db
         }else if(species == "YEAST"){
