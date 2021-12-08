@@ -257,7 +257,7 @@ ui <- dashboardPage(
                                                  fluidRow(h2("pquantR: a shiny-based application for downstream analysis of proteomics data processed"),br(),
                                                           p("As a powerful tool to analyze protein expression, proteomics becomes more and more important for biomedical researchers to convert large amounts of experimental data into biological knowledge. However, there is a major challenge in this field: data processing is rather complicated that may confuses researchers or raises a hard learning cost. To address this, we have created pquantR, a free open-source shiny-based analytics platform that allows users to analyze data from label-free quantification workflow, which is common in proteomics relative researches. The uploading data of this application comes from our 'quantms' pipeline, which used OpenMS and MSstats, with feature quantification, feature summarization, quality control and group-based statistical analysis. Besides, pquantR has a user-friendly interface, with automated data preprocessing pipeline which is easy to operate. A few clicks are needed to quickly analyze statistical data. Furthermore, multiple kinds of plots are supported and integrated in one application: visualization of processed data, potential systematic differences, protein differential expression and quality control plots. Users also could interact with volcano plot to select and inspect the detailed information."),
                                                           br(),br(),br(),
-                                                          div(img(src = 'pipeline.svg', width = '50%'), style="text-align: center;",),
+                                                          div(img(src = 'pipeline.png', width = '50%'), style="text-align: center;",),
                                                           br(),br(),br(),
                                                           h4("Data not ready?", a(href="./data/out_msstats_example.csv", download="out_msstats_example.csv", "Get demo data here"))),
                                        )
@@ -444,7 +444,10 @@ server <- function(input, output, session) {
             if(is.null(dataControl$inputData_URL_state) != TRUE){
                 fileData <- prePquant$inputData_URL_out_msstats
             }else{
-                if(input$inputData$type == "application/vnd.ms-excel" | input$inputData$type == "application/x-gzip"){  #upload a csv file
+                fileName <- input$inputData$name
+                tmp <- strsplit(fileName, ".", fixed = TRUE)
+                fileType <- tmp[[1]][length(tmp[[1]])]
+                if(fileType == "csv" | fileType == "gz"){  #upload a csv file
                     fileData <- data.table::fread(input$inputData$datapath) %>% as.data.frame
                 }
                 else{
