@@ -350,10 +350,10 @@ ui <- dashboardPage(
                                                                
                                                                 ### from Proteus: live.R
                                                                 fluidRow(
-                                                                         column(5,
-                                                                                plotOutput("dynamic_plotVolcano_out", height = "600px", width = "100%", brush = "plot_brush",hover="plot_hover"),
-                                                                                tableOutput("dynamic_significanceTable_out")),
-                                                                         column(7,
+                                                                         column(6,
+                                                                                plotOutput("dynamic_plotVolcano_out", height = "600px", width = "80%", brush = "plot_brush",hover="plot_hover"),
+                                                                                DT::dataTableOutput("dynamic_significanceTable_out")),
+                                                                         column(6,
                                                                                 fluidRow(
                                                                                          column(4,
                                                                                                 radioButtons("intensityScale","Intesity Scale:",choices = c("Linear scale" = "","Log scale"="Log"),inline = TRUE))),
@@ -364,7 +364,7 @@ ui <- dashboardPage(
                                                                                          column(2,
                                                                                                 fluidRow(tableOutput("dynamic_replicateTable_out")))))
                                                                 ),
-                                                               
+                                                                tags$hr(),
                                                                 # Show main protein table
                                                                 fluidRow(
                                                                          column(width = 12,
@@ -391,6 +391,7 @@ ui <- dashboardPage(
 # Define server logic ----
 server <- function(input, output, session) {
     options(shiny.maxRequestSize=520*1024^2)
+    options(ggrepel.max.overlaps = Inf)
   
     prePquant <- reactiveValues(DDA2009.proposed = NULL,
                                 DDA2009.comparisons = NULL,
@@ -1284,32 +1285,29 @@ server <- function(input, output, session) {
         rownames(volcanoLive$res) <- c(1:nrow(volcanoLive$res))
         
         progress$set(message = "Preprocessing is over.", value = 1)
-    })
-  
-    
-    # else
-    output$dynamic_gap_out <- renderUI({HTML('<br/>')})
-    
-    output$dynamic_replicateTable_out <- dynamic_replicateTable(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points)
-    output$dynamic_significanceTable_out <- dynamic_significanceTable(volcanoLive$res, volcanoLive$res, input)
-    output$dynamic_jitterPlot_out <- dynamic_jitterPlot(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
 
-    
-    ## Volcano plot
-    output$dynamic_plotVolcano_out <- renderPlot({
-        if (renderCheck$dynamic_volcano > 0) {
+        output$dynamic_gap_out <- renderUI({HTML('<br/>')})
+        
+        output$dynamic_replicateTable_out <- dynamic_replicateTable(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points)
+        output$dynamic_significanceTable_out <- dynamic_significanceTable(volcanoLive$res, volcanoLive$res, input)
+        output$dynamic_jitterPlot_out <- dynamic_jitterPlot(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
+        
+        
+        ## Volcano plot
+        output$dynamic_plotVolcano_out <- renderPlot({
+          if (renderCheck$dynamic_volcano > 0) {
             tab_idx <- as.numeric(input$allProteinTable_rows_selected)
             pVol <- dynamic_plotVolcano(volcanoLive$res, binhex=FALSE)
             if(length(tab_idx) > 0) {
-                pVol <- pVol + geom_point(data=volcanoLive$res[tab_idx,], size=3, color='red')
+              pVol <- pVol + geom_point(data=volcanoLive$res[tab_idx,], size=3, color='red')
             }
             return(pVol)
-        } else { return(NULL) }
-    })
-    
-    
-    output$dynamic_allProteinTable_out <- DT::renderDataTable({
-        if(renderCheck$dynamic_volcano > 0) {
+          } else { return(NULL) }
+        })
+        
+        
+        output$dynamic_allProteinTable_out <- DT::renderDataTable({
+          if (renderCheck$dynamic_volcano > 0) {
             # assume first column is id ("protein" or "peptide")
             idcol <- names(volcanoLive$res)[1]
             cols <- c(idcol, "log2FC", "pvalue", "adj.pvalue")
@@ -1317,8 +1315,12 @@ server <- function(input, output, session) {
             d[, 2:ncol(d)] <- sapply(d[, 2:ncol(d)], function(x) signif(x, 3))
             d <- DT::datatable(d, class = 'cell-border strip hover')
             DT::formatStyle(d, 0, cursor = 'pointer')
-        } else { return(NULL) }
+          } else { return(NULL) }
+        })
+        
     })
+    
+    
 
     
 }

@@ -2,21 +2,22 @@ getSelector <- function(fileData, flag, DDA2009.proposed){
       # Automatically create the manually created matrix in MSstats, user manual p23
       len <- length(levels(DDA2009.proposed$FeatureLevelData$GROUP))
       
-      ourMatrix <- matrix(c(0:0),nrow=len,ncol=len)
-      diag(ourMatrix) = -1
-      for(i in 1:len-1){
-        ourMatrix[i,i+1] = 1
+      tmp <- t(combn(len,2))
+      matrix_len = length(t(combn(len,2))) / 2
+      
+      ourMatrix <- matrix(c(0:0),nrow=matrix_len,ncol=len)
+      
+      for(i in 1:matrix_len){
+        ourMatrix[i, tmp[i]] = -1
+        ourMatrix[i, tmp[i + matrix_len]] = 1
       }
-      ourMatrix[len,1] = 1
       
       ourCondition <- levels(DDA2009.proposed$ProteinLevelData$GROUP)
-      len2 <- length(ourCondition)
-      tmp <- matrix(ourCondition, nr=len2, nc=1)
-      name <- matrix(nr=len2, nc=1)
-      for(i in 1:len2-1){
-        name[i,1] <- sprintf('%s-%s', tmp[i+1,1], tmp[i,1])
+      tmp_name <- matrix(ourCondition, nr=len, nc=1)
+      name <- matrix(nr=matrix_len, nc=1)
+      for(i in 1:matrix_len){
+        name[i,1] <- sprintf('%s-%s', tmp_name[tmp[i+matrix_len]], tmp_name[tmp[i]])
       }
-      name[len2,1] <- sprintf('%s-%s', tmp[1,1], tmp[len2,1])
       
       selector <- name
       
