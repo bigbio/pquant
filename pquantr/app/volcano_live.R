@@ -31,11 +31,11 @@ dynamic_replicateTable <- function(tab, input, pdat, max_points) {
         df
       }
     }
-  }, width = "80px")
+  }, width = "300px")
 }
 
 dynamic_significanceTable <- function(tab, res, input) {
-  renderTable({
+  renderDT({
     sel <- dynamic_selectProtein(tab, input)
     if(!is.null(sel)) {
       df <- data.frame(
@@ -48,7 +48,8 @@ dynamic_significanceTable <- function(tab, res, input) {
         check.names = FALSE)
       df
     }
-  }, width = "100px")
+  }, width = "100%",
+  options = list(lengthChange = FALSE, scrollX = TRUE, searching = FALSE))
 }
 
 
