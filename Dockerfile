@@ -24,12 +24,26 @@ RUN apt-get update && apt-get install -y \
     vim
 
 # Install library
-RUN R -e "install.packages(c('shinydashboard','DT','pheatmap','shinyjs','shinyWidgets','IDPmisc','devtools','htmlwidgets','log4r','gplots','RcppArmadillo','BiocManager','reshape2','checkmate','lme4','ggrepel','rhandsontable'),dependencies=TRUE,repos='http://cran.rstudio.com/')"
-RUN R -e "devtools::install_github('Vitek-Lab/MSstats')"
-RUN R -e "BiocManager::install('AnnotationDbi')"
-RUN R -e "BiocManager::install('org.Hs.eg.db')"
-RUN R -e "BiocManager::install('org.Sc.sgd.db')"
-RUN R -e "BiocManager::install('org.Rn.eg.db')"
+RUN install2.r --error --skipinstalled \
+    shinydashboard DT pheatmap shinyjs shinyWidgets IDPmisc devtools htmlwidgets log4r gplots RcppArmadillo BiocManager reshape2 checkmate lme4 ggrepel rhandsontable viridis
+
+RUN installGithub.r Vitek-Lab/MSstats \
+    && rm -rf /tmp/downloaded_packages/
+RUN R -e "if (!library(MSstats, logical.return=T)) devtools::install_github('Vitek-Lab/MSstats')"
+RUN R -e "if (!library(MSstats, logical.return=T)) quit(status=10)"
+
+RUN R -e "BiocManager::install('AnnotationDbi')" \
+ && R -e "BiocManager::install('org.Hs.eg.db')" \
+ && R -e "BiocManager::install('org.Sc.sgd.db')" \
+ && R -e "BiocManager::install('org.Rn.eg.db')"
+RUN install2.r --error --skipinstalled -r http://bioconductor.org/packages/3.0/bioc --deps TRUE \
+    AnnotationDbi \
+    org.Hs.eg.db \
+    org.Sc.sgd.db \
+    org.Rn.eg.db \
+    && rm -rf /tmp/downloaded_packages/
+
+
 
 
 ### --------------------------------------
