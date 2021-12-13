@@ -147,3 +147,69 @@ dynamic_plotVolcano <- function(res, bins=80, xmax=NULL, ymax=NULL, marginal.his
   if(marginal.histograms) g <- ggExtra::ggMarginal(g, size=10, type = "histogram", xparams=list(bins=100), yparams=list(bins=50))
   return(g)
 }
+
+
+
+dynamic_plotFID <- function(pdat, conditions, pair, bins=80, marginal.histograms=FALSE,
+                    xmin=NULL, xmax=NULL, ymax=NULL, text.size=12, point.size=1.6,
+                    show.legend=TRUE, plot.grid=TRUE, binhex=TRUE, transform.fun=log10) {
+  if(binhex & marginal.histograms) {
+    warning("Cannot plot with both binhex=TRUE and marginal.histograms=TRUE. Ignoring binhex.")
+    binhex=FALSE
+  }
+
+  title <- paste(pair, collapse=":")
+  
+  ttab <- transform.fun(pdat)
+  
+  # helper function
+  
+  condMeans <- function(cond) {
+    m <- rowMeans(ttab[,which(conditions == cond), drop=FALSE], na.rm=TRUE)
+    m[is.nan(m)] <- NA
+    m
+  }
+  
+  # build data frame with x-y cooordinates
+  # including infinities
+  m1 <- condMeans(pair[1])
+  m2 <- condMeans(pair[2])
+  good <- !is.na(m1) & !is.na(m2)
+  df <- data.frame(
+    id = rownames(ttab),
+    x = (m1 + m2) / 2,
+    y = m2 - m1,
+    good = good
+  )
+  
+  mx <- 1.1 * max(abs(df$y), na.rm=TRUE)
+  m <- rbind(m1[!good], m2[!good])
+  df[!good, "x"] <- colSums(m, na.rm=TRUE)
+  df[!good, "y"] <- ifelse(is.na(m[1,]), mx, -mx)
+  
+  g <- ggplot(df[good, ], aes_(x=~x, y=~y))
+  
+  if(binhex) {
+    g <- g + stat_binhex(bins=bins, show.legend=show.legend, na.rm=TRUE) +
+      viridis::scale_fill_viridis(name="count", na.value=NA)
+    #scale_fill_gradientn(colours=c("seagreen","yellow", "red"), name = "count",na.value=NA)
+  } else {
+    g <- g + geom_point(size=point.size, na.rm=TRUE) +
+      geom_point(data=df[!good,], aes_(x=~x, y=~y), colour="orange", size=point.size, na.rm=TRUE)
+  }
+  
+  if(plot.grid) {
+    g <- g + simple_theme_grid
+  } else {
+    g <- g + simple_theme
+  }
+  
+  g <- g + geom_abline(colour='red', slope=0, intercept=0) +
+    labs(title=title, x=paste0(pair[1], '+', pair[2]), y=paste0(pair[2], '-', pair[1])) +
+    theme(text = element_text(size=text.size))
+  
+  if(!is.null(xmin) && !is.null(xmax)) g <- g + scale_x_continuous(limits = c(xmin, xmax), expand = c(0, 0))
+  if(!is.null(ymax) ) g <- g + scale_y_continuous(limits = c(-ymax, ymax), expand = c(0, 0))
+  if(marginal.histograms) g <- ggExtra::ggMarginal(g, size=10, type = "histogram", xparams=list(bins=100), yparams=list(bins=50))
+  return(g)
+}
