@@ -239,6 +239,14 @@ ui <- dashboardPage(
                                                                        label = "Render Plot",
                                                                        icon = icon("play-circle"),
                                                                        style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
+                                                 ),
+                                                 menuItem("Fold-change-intensity plot",
+                                                          icon = icon("chart-bar"),br(),
+                                                          uiOutput('dynamic_FID_selector'),
+                                                          actionButton(inputId = "dynamic_FID_Render",
+                                                                       label = "Render Plot",
+                                                                       icon = icon("play-circle"),
+                                                                       style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
                                                  )
                                      )
                     )
@@ -275,7 +283,7 @@ ui <- dashboardPage(
                                                                  title = ".csv data", value = "initialData_tabbox_data",
                                                                  fluidRow(
                                                                           column(11,
-                                                                                 DT::DTOutput("contents", width = '80%')))
+                                                                                 DT::DTOutput("contents", width = '90%')))
                                                         ),
                                                         tabPanel(
                                                                  title = "Data process plots", value = "initialData_tabbox_plot",
@@ -340,13 +348,13 @@ ui <- dashboardPage(
                                                         tabPanel(
                                                                  title = "Data", value = "dynamic_tabbox_data",
                                                                  fluidRow(
-                                                                          column(width = 8,
+                                                                          column(width = 9,
                                                                                  DT::DTOutput("dynamic_evidence_contents")),
-                                                                          column(width = 4,
+                                                                          column(width = 3,
                                                                                  rHandsontableOutput("dynamic_define_metadata")))
                                                         ),
                                                         tabPanel(
-                                                                title = "Plot", value = "dynamic_tabbox_plot",
+                                                                title = "Volcano plot", value = "dynamic_tabbox_plot",
                                                                
                                                                 ### from Proteus: live.R
                                                                 fluidRow(
@@ -369,6 +377,30 @@ ui <- dashboardPage(
                                                                 fluidRow(
                                                                          column(width = 12,
                                                                                 DT::dataTableOutput("dynamic_allProteinTable_out")))
+                                                       ),
+                                                       tabPanel(title = "Fold-change-intensity plot", value = "dynamic_tabbox_plot2",
+                                                                
+                                                                ### from Proteus: live.R
+                                                                fluidRow(
+                                                                  column(6,
+                                                                         plotOutput("dynamic_plotFID_out", height = "600px", width = "80%", brush = "plot_brush",hover="plot_hover"),
+                                                                         DT::dataTableOutput("dynamic_FID_significanceTable_out")),
+                                                                  column(6,
+                                                                         fluidRow(
+                                                                           column(4,
+                                                                                  radioButtons("dynamic_FID_intensityScale","Intesity Scale:",choices = c("Linear scale" = "","Log scale"="Log"),inline = TRUE))),
+                                                                         fluidRow(
+                                                                           column(4,
+                                                                                  fluidRow(htmlOutput("dynamic_FID_gap_out")),
+                                                                                  fluidRow(plotOutput("dynamic_FID_jitterPlot_out", height = "300px",width = "100%"))),
+                                                                           column(2,
+                                                                                  fluidRow(tableOutput("dynamic_FID_replicateTable_out")))))
+                                                                ),
+                                                                tags$hr(),
+                                                                # Show main protein table
+                                                                fluidRow(
+                                                                  column(width = 12,
+                                                                         DT::dataTableOutput("dynamic_FID_allProteinTable_out")))
                                                        )
                                                    
                                                  )
@@ -404,10 +436,12 @@ server <- function(input, output, session) {
                                   default_method_volcano = 0,
                                   default_method_heatmap = 0,
                                   default_method_comparison = 0,
-                                  dynamic_volcano = 0)
+                                  dynamic_volcano = 0,
+                                  dynamic_FID = 0)
     
     volcanoLive <- reactiveValues(pdat = NULL,
                                   res = NULL,
+                                  res_FID = NULL,
                                   max_points = NULL)
     
     dataControl <- reactiveValues(annoStart = 0,
@@ -560,9 +594,12 @@ server <- function(input, output, session) {
     
     observe({
         if(is.null(dataControl$inputData_state) | dataControl$annoSubmit == 0){
-            disable("dynamic_volcano_Render")}
+            disable("dynamic_volcano_Render")
+            disable("dynamic_FID_Render")}
+            
         else{
-            enable("dynamic_volcano_Render")}
+            enable("dynamic_volcano_Render")
+            enable("dynamic_FID_Render")}
     })
     
     
@@ -776,6 +813,7 @@ server <- function(input, output, session) {
         renderCheck$default_method_heatmap <- 0
         renderCheck$default_method_comparison <- 0
         renderCheck$dynamic_volcano <- 0
+        renderCheck$dynamic_FID <- 0
         
         dataControl$annoStart <- 0
         dataControl$annoSubmit <- 0
@@ -1024,6 +1062,7 @@ server <- function(input, output, session) {
         dataControl$annoSubmit <- 0
         
         renderCheck$dynamic_volcano <- 0
+        renderCheck$dynamic_FID <- 0
         
         volcanoLive$pdat <- NULL
         volcanoLive$res <- NULL
@@ -1318,6 +1357,115 @@ server <- function(input, output, session) {
           } else { return(NULL) }
         })
         
+    })
+    
+    
+    
+    ### dynamic FID Plot
+    
+    dynamic_FID_select <- reactive({
+      if(is.null(input$inputData)) {
+        selectInput(inputId = 'dynamic_FID_input',
+                    label = 'Please upload .csv data first',
+                    choices = NULL)
+      }
+      else if(dataControl$annoSubmit == 0){
+        selectInput(inputId = 'dynamic_FID_input',
+                    label = 'Please submit annotation first',
+                    choices = NULL)
+      }
+      else {
+        dynamic_fid_selector <- getSelector(inputdf(), flag = 'volcano',
+                                            prePquant$DDA2009.proposed)
+        selectInput(inputId = 'dynamic_FID_input',
+                    label = 'Options',
+                    choices = as.list(dynamic_fid_selector))
+      }
+    })
+    
+    output$dynamic_FID_selector <- renderUI({
+      dynamic_FID_select()
+    })
+    
+    
+    observeEvent(input$dynamic_FID_Render, {
+      renderCheck$dynamic_FID <- 1
+      
+      progress <- shiny::Progress$new()
+      on.exit(progress$close())
+      
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
+      
+      selector = input$dynamic_FID_input
+      comparisons <- subset(prePquant$DDA2009.comparisons$ComparisonResult, Label==selector)
+      volcanoLive$res_FID <- comparisons
+      
+      volcanoLive$res_FID$"-log10(pvalue)" <- -log10(volcanoLive$res_FID$pvalue)
+      
+      rownames(volcanoLive$res_FID) <- c(1:nrow(volcanoLive$res_FID))
+      
+      progress$set(message = "Begin to preprocess data, please wait...", value = 0.5)
+      
+      tmp <- dynamic_metadata()
+      condition <- unique(tmp$condition)
+      FID_pair <- strsplit(selector, "-")[[1]]
+      
+      # Generate the fold-change/intensity dataset. The same as in the FID plot.
+      condMeans <- function(cond) {
+          m <- rowMeans(log10(volcanoLive$pdat)[,which(condition == cond), drop=FALSE], na.rm=TRUE)
+          m[is.nan(m)] <- NA
+          m
+      }
+      m1 <- condMeans(FID_pair[1])
+      m2 <- condMeans(FID_pair[2])
+      good <- !is.na(m1) & !is.na(m2)
+      fi <- data.frame(
+          id = rownames(volcanoLive$pdat),
+          x = (m1 + m2) / 2,
+          y = m2 - m1,
+          good = good
+      )
+      rownames(fi) <- 1:nrow(fi)
+      
+      mx <- 1.1 * max(abs(fi$y), na.rm=TRUE)
+      m <- rbind(m1[!good], m2[!good])
+      fi[!good, "x"] <- colSums(m, na.rm=TRUE)
+      fi[!good, "y"] <- ifelse(is.na(m[1,]), mx, -mx)
+      
+      progress$set(message = "Preprocessing is over.", value = 1)
+      
+      output$dynamic_FID_gap_out <- renderUI({HTML('<br/>')})
+      
+      output$dynamic_FID_replicateTable_out <- dynamic_replicateTable(fi, input, volcanoLive$pdat, volcanoLive$max_points)
+      output$dynamic_FID_significanceTable_out <- dynamic_significanceTable(fi, volcanoLive$res_FID, input)
+      output$dynamic_FID_jitterPlot_out <- dynamic_jitterPlot(fi, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
+      
+      
+      ## FID plot
+      output$dynamic_plotFID_out <- renderPlot({
+          if (renderCheck$dynamic_FID > 0) {
+              tab_idx <- as.numeric(input$allProteinTable_rows_selected)
+              pFID <- dynamic_plotFID(volcanoLive$pdat, condition, FID_pair, binhex=FALSE)
+              if(length(tab_idx) > 0) {
+                  pFID <- pFID + geom_point(data=fi[tab_idx,], size=3, color='red')
+              }
+              return(pFID)
+          } else { return(NULL) }
+      })
+      
+      
+      output$dynamic_FID_allProteinTable_out <- DT::renderDataTable({
+          if (renderCheck$dynamic_FID > 0) {
+              # assume first column is id ("protein" or "peptide")
+              idcol <- names(volcanoLive$res_FID)[1]
+              cols <- c(idcol, "log2FC", "pvalue", "adj.pvalue")
+              d <- volcanoLive$res_FID[, cols]
+              d[, 2:ncol(d)] <- sapply(d[, 2:ncol(d)], function(x) signif(x, 3))
+              d <- DT::datatable(d, class = 'cell-border strip hover')
+              DT::formatStyle(d, 0, cursor = 'pointer')
+          } else { return(NULL) }
+      })
+      
     })
     
     
