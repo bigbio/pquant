@@ -1,4 +1,4 @@
-dynamic_selectProtein <- function(tab, input, max_hover=1) {
+dynamic_fid_selectProtein <- function(tab, input, max_hover=1) {
   sel <- NULL
   tab_idx <- as.numeric(input$allProteinTable_rows_selected)
   if(!is.null(input$plot_brush)){
@@ -14,9 +14,9 @@ dynamic_selectProtein <- function(tab, input, max_hover=1) {
   return(sel)
 }
 
-dynamic_replicateTable <- function(tab, input, pdat, max_points) {
+dynamic_fid_replicateTable <- function(tab, input, pdat, max_points) {
   renderTable({
-    sel <- dynamic_selectProtein(tab, input)
+    sel <- dynamic_fid_selectProtein(tab, input)
     if(!is.null(sel)) {
       dat <- pdat[sel,, drop=FALSE]
       if(input$intensityScale == 'Log'){
@@ -26,7 +26,7 @@ dynamic_replicateTable <- function(tab, input, pdat, max_points) {
         df <- data.frame(
           Sample=colnames(dat),
           Intensity=signif(colMeans(dat, na.rm = TRUE),
-          3))
+                           3))
         df$Intensity[is.nan(df$Intensity)] <- NA
         df
       }
@@ -34,28 +34,28 @@ dynamic_replicateTable <- function(tab, input, pdat, max_points) {
   }, width = "300px")
 }
 
-dynamic_significanceTable <- function(tab, res, input, flag) {
+dynamic_fid_significanceTable <- function(tab, res, input, flag) {
   renderDT({
-    sel <- dynamic_selectProtein(tab, input)
+    sel <- dynamic_fid_selectProtein(tab, input)
     if(!is.null(sel)) {
-        if(flag == 'n') {
-            df <- data.frame(
-              `Protein`=sprintf("%s", res$Protein[sel]),
-              `GeneID`=sprintf("%s", res$ENTREZID[sel]),
-              `GeneName`=sprintf("%s", res$GENENAME[sel]),
-              `Log2FC`=sprintf("%.2g", res$log2FC[sel]),
-              `P-value`=sprintf("%.2g", res$pvalue[sel]),
-              `adjusted P-value`=sprintf("%.2g", res$adj.pvalue[sel]),
-              check.names = FALSE)
-        } else {
-            df <- data.frame(
-              `Gene`=sprintf("%s", res$Protein[sel]),
-              `GeneName`=sprintf("%s", res$GENENAME[sel]),
-              `Log2FC`=sprintf("%.2g", res$log2FC[sel]),
-              `P-value`=sprintf("%.2g", res$pvalue[sel]),
-              `adjusted P-value`=sprintf("%.2g", res$adj.pvalue[sel]),
-              check.names = FALSE)
-        }
+      if(flag == 'n') {
+        df <- data.frame(
+          `Protein`=sprintf("%s", res$Protein[sel]),
+          `GeneID`=sprintf("%s", res$ENTREZID[sel]),
+          `GeneName`=sprintf("%s", res$GENENAME[sel]),
+          `Log2FC`=sprintf("%.2g", res$log2FC[sel]),
+          `P-value`=sprintf("%.2g", res$pvalue[sel]),
+          `adjusted P-value`=sprintf("%.2g", res$adj.pvalue[sel]),
+          check.names = FALSE)
+      } else {
+        df <- data.frame(
+          `Gene`=sprintf("%s", res$Protein[sel]),
+          `GeneName`=sprintf("%s", res$GENENAME[sel]),
+          `Log2FC`=sprintf("%.2g", res$log2FC[sel]),
+          `P-value`=sprintf("%.2g", res$pvalue[sel]),
+          `adjusted P-value`=sprintf("%.2g", res$adj.pvalue[sel]),
+          check.names = FALSE)
+      }
       
     }
     return(df)
@@ -64,9 +64,9 @@ dynamic_significanceTable <- function(tab, res, input, flag) {
 }
 
 
-dynamic_jitterPlot <- function(tab, input, pdat, max_points, meta) {
+dynamic_fid_jitterPlot <- function(tab, input, pdat, max_points, meta) {
   renderPlot({
-    sel <- dynamic_selectProtein(tab, input)
+    sel <- dynamic_fid_selectProtein(tab, input)
     if(!is.null(sel) && length(sel) <= max_points) {
       dat <- pdat[sel,, drop=FALSE]
       if(input$intensityScale == 'Log'){
@@ -117,28 +117,52 @@ simple_theme_grid <- ggplot2::theme_bw() +
   )
 
 
-
-dynamic_plotVolcano <- function(res, bins=80, xmax=NULL, ymax=NULL, marginal.histograms=FALSE, text.size=12, show.legend=TRUE,
-                                plot.grid=TRUE, binhex=TRUE) {
+dynamic_fid_plotFID <- function(pdat, conditions, pair, bins=80, marginal.histograms=FALSE,
+                            xmin=NULL, xmax=NULL, ymax=NULL, text.size=12, point.size=1.6,
+                            show.legend=TRUE, plot.grid=TRUE, binhex=TRUE, transform.fun=log10) {
   if(binhex & marginal.histograms) {
     warning("Cannot plot with both binhex=TRUE and marginal.histograms=TRUE. Ignoring binhex.")
     binhex=FALSE
   }
   
-  tr <- attr(res, "transform.fun")
-  conds <- attr(res, "conditions")
-  xlab <- ifelse(is.null(tr), "log2FC", paste(tr, "log2FC"))
-  tit <- paste(conds, collapse=":")
-  id <- names(res)[1]
+  title <- paste(pair, collapse=":")
   
-  g <- ggplot(res, aes_(~log2FC, ~-log10(pvalue)))
+  ttab <- transform.fun(pdat)
+  
+  # helper function
+  
+  condMeans <- function(cond) {
+    m <- rowMeans(ttab[,which(conditions == cond), drop=FALSE], na.rm=TRUE)
+    m[is.nan(m)] <- NA
+    m
+  }
+  
+  # build data frame with x-y cooordinates
+  # including infinities
+  m1 <- condMeans(pair[1])
+  m2 <- condMeans(pair[2])
+  good <- !is.na(m1) & !is.na(m2)
+  df <- data.frame(
+    id = rownames(ttab),
+    x = (m1 + m2) / 2,
+    y = m2 - m1,
+    good = good
+  )
+  
+  mx <- 1.1 * max(abs(df$y), na.rm=TRUE)
+  m <- rbind(m1[!good], m2[!good])
+  df[!good, "x"] <- colSums(m, na.rm=TRUE)
+  df[!good, "y"] <- ifelse(is.na(m[1,]), mx, -mx)
+  
+  g <- ggplot(df[good, ], aes_(x=~x, y=~y))
   
   if(binhex) {
     g <- g + stat_binhex(bins=bins, show.legend=show.legend, na.rm=TRUE) +
       viridis::scale_fill_viridis(name="count", na.value=NA)
-    #scale_fill_gradientn(colours=c("seagreen","yellow", "red"), name = "count", na.value=NA)
+    #scale_fill_gradientn(colours=c("seagreen","yellow", "red"), name = "count",na.value=NA)
   } else {
-    g <- g + geom_point(na.rm=TRUE)
+    g <- g + geom_point(size=point.size, na.rm=TRUE) +
+      geom_point(data=df[!good,], aes_(x=~x, y=~y), colour="orange", size=point.size, na.rm=TRUE)
   }
   
   if(plot.grid) {
@@ -147,14 +171,12 @@ dynamic_plotVolcano <- function(res, bins=80, xmax=NULL, ymax=NULL, marginal.his
     g <- g + simple_theme
   }
   
-  g <- g + geom_vline(colour='red', xintercept=0) +
-    theme(text = element_text(size=text.size)) +
-    labs(x=xlab, y="-log10 p", title=tit)
+  g <- g + geom_abline(colour='red', slope=0, intercept=0) +
+    labs(title=title, x=paste0(pair[1], '+', pair[2]), y=paste0(pair[2], '-', pair[1])) +
+    theme(text = element_text(size=text.size))
   
-  
-  if(!is.null(xmax)) g <- g + scale_x_continuous(limits = c(-xmax, xmax), expand = c(0, 0))
-  if(!is.null(ymax) ) g <- g + scale_y_continuous(limits = c(0, ymax), expand = c(0, 0))
-  
+  if(!is.null(xmin) && !is.null(xmax)) g <- g + scale_x_continuous(limits = c(xmin, xmax), expand = c(0, 0))
+  if(!is.null(ymax) ) g <- g + scale_y_continuous(limits = c(-ymax, ymax), expand = c(0, 0))
   if(marginal.histograms) g <- ggExtra::ggMarginal(g, size=10, type = "histogram", xparams=list(bins=100), yparams=list(bins=50))
   return(g)
 }
