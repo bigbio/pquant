@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install library
 RUN install2.r --error --skipinstalled \
-    shinydashboard DT pheatmap shinyjs shinyWidgets IDPmisc devtools htmlwidgets log4r gplots RcppArmadillo BiocManager reshape2 checkmate lme4 ggrepel rhandsontable viridis
+    shinydashboard DT pheatmap shinyjs shinyWidgets IDPmisc devtools htmlwidgets log4r gplots RcppArmadillo BiocManager reshape2 checkmate lme4 ggrepel rhandsontable viridis proteus
 
 RUN installGithub.r Vitek-Lab/MSstats \
     && rm -rf /tmp/downloaded_packages/
