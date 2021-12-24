@@ -16,6 +16,7 @@ library(IDPmisc)
 library(data.table)
 library(dplyr)
 library(tidyr)
+library(proteus)
 
 library(org.Hs.eg.db)
 library(org.Sc.sgd.db)
@@ -24,6 +25,8 @@ library(org.Rn.eg.db)
 # Source getPlots functions
 source("./app/getSelector.R")
 source("./app/volcano_live.R")
+source("./app/FID_live.R")
+source("./app/proteus_plots.R")
 
 
 LoadToEnvironment <- function(RData, env=new.env()) {
@@ -80,6 +83,14 @@ ui <- dashboardPage(
                                                  
                                                  menuItem("Parameters selection", #startExpanded = TRUE,
                                                           icon = icon("cogs"),br(),
+                                                          div(style = "text-align:left", 
+                                                              "Pre: Proteins to Gene Accessions"),  
+                                                          switchInput(inputId = "user_choose_pre_pro2gene",
+                                                                      onLabel = "Yes", offLabel = "No",
+                                                                      onStatus = "primary", offStatus = "default",
+                                                                      value = FALSE),
+                                                          helpText("You could perform gene expression analysis coming from the peptide info by choose 'Yes'."),
+                                                          
                                                           radioButtons(inputId = "user_choose_logTrans",
                                                                        label = "Choose logarithm transformation",
                                                                        choices = c("2" = "2",
@@ -201,11 +212,8 @@ ui <- dashboardPage(
                     ),
             
                     
-                    # dynamic volcano
+                    # dynamic plots page
                     conditionalPanel(condition = "input.main_tabs == 'dynamic_volcano'",br(),
-                                     div(style = "text-align:center",
-                                         "Use this part function",br(),
-                                         "must upload a \'.csv\' file",br()),br(),
                                      sidebarMenu(
                                                  menuItem("Assign condition",br(),
                                                           icon = icon("clone"),
@@ -249,6 +257,30 @@ ui <- dashboardPage(
                                                                        style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
                                                  )
                                      )
+                    ),
+                    
+                    # Proteus page
+                    conditionalPanel(condition = "input.main_tabs == 'proteus_condition'",br(),
+                                     div(style = "text-align:center",
+                                         "Use this part function must",br(),
+                                         "submit annotation in 'Dynamic plots'",br()),br(),
+                                     sidebarMenu(
+                                                 menuItem("Peptide data",br(),
+                                                          icon = icon("images"),
+                                                          actionButton(inputId = "proteus_peptide_Render",
+                                                                       label = "Render Plots",
+                                                                       icon = icon("play-circle"),
+                                                                       style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
+                                                 ),
+                                                 menuItem("Protein data",br(),
+                                                          icon = icon("images"),
+                                                          actionButton(inputId = "proteus_protein_Render",
+                                                                       label = "Render Plots",
+                                                                       icon = icon("play-circle"),
+                                                                       style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
+                                                 )
+                                     )
+                      
                     )
     ),
   
@@ -297,7 +329,7 @@ ui <- dashboardPage(
                                                                                  plotOutput("initialData_conditionPlot_out")))
                                                         ),
                                                         tabPanel(
-                                                                 title = "Preprocessed data", vaule ="initialData_tabbox_preprocesseddata",
+                                                                 title = "Preprocessed data", value ="initialData_tabbox_preprocesseddata",
                                                                  fluidRow(
                                                                           column(11,
                                                                                  DT::DTOutput("preprocessedData", width = '80%')))
@@ -339,7 +371,7 @@ ui <- dashboardPage(
                       
                       
                               # dynamic volcano tab
-                              tabPanel(title = 'Dynamic volcano',
+                              tabPanel(title = 'Dynamic Plots',
                                        value = 'dynamic_volcano',
                                        icon = icon("project-diagram"),
                                        fluidPage(
@@ -405,7 +437,50 @@ ui <- dashboardPage(
                                                    
                                                  )
                                        )
-                              )#,
+                              ),
+                              
+                              
+                              # Proteus tab
+                              tabPanel(title = "Proteus method",
+                                       value = 'proteus_condition',
+                                       icon = icon("chart-area"),
+                                       fluidPage(
+                                           tabBox(# No title
+                                                  id = "proteus_tabbox", selected = "proteus_tabbox_peptide", width = 12,
+                                                  tabPanel(
+                                                           title = "Peptide data", value = "proteus_tabbox_peptide",
+                                                           fluidRow(
+                                                                    column(6,
+                                                                           verbatimTextOutput("proteus_peptide_summary_out")),
+                                                                    column(6,
+                                                                           plotOutput("proteus_peptide_distance_out"))),br(),
+                                                           fluidRow(
+                                                                    column(6,
+                                                                           plotOutput("proteus_peptide_number_out")),
+                                                                    column(6,
+                                                                           plotOutput("proteus_peptide_jaccard_out"))),br(),
+                                                           fluidRow(
+                                                                    column(6,
+                                                                           plotOutput("proteus_peptide_pca_out")),
+                                                                    column(6,
+                                                                           plotOutput("proteus_peptide_clustering_out")))
+                                                  ),
+                                                  tabPanel(
+                                                           title = "Protein data", value = "proteus_tabbox_protein",
+                                                           fluidRow(
+                                                                    column(6,
+                                                                           verbatimTextOutput("proteus_protein_summary_out")),
+                                                                    column(6,
+                                                                           plotOutput("proteus_protein_normalization_median_out"))),br(),
+                                                           fluidRow(
+                                                                    column(6,
+                                                                           plotOutput("proteus_protein_mean_out")),
+                                                                    column(6,
+                                                                           plotOutput("proteus_protein_clustering_out")))
+                                                  )
+                                           )
+                                       )
+                              )
                       
                       
                               # enrichment analysis tab
@@ -437,9 +512,12 @@ server <- function(input, output, session) {
                                   default_method_heatmap = 0,
                                   default_method_comparison = 0,
                                   dynamic_volcano = 0,
-                                  dynamic_FID = 0)
+                                  dynamic_FID = 0,
+                                  proteus_peptide = 0,
+                                  proteus_protein = 0)
     
     volcanoLive <- reactiveValues(pdat = NULL,
+                                  pepdat = NULL,
                                   res = NULL,
                                   res_FID = NULL,
                                   max_points = NULL)
@@ -528,16 +606,6 @@ server <- function(input, output, session) {
         else{
             fileData <- inputdf()
             datatable(fileData,options = list(scrollX = TRUE))
-        }
-    })
-    
-    output$preprocessedData <- renderDT({
-        if(is.null(prePquant$DDA2009.comparisons)){
-            return(NULL)
-        }
-        else{
-            datatable(prePquant$DDA2009.comparisons$ComparisonResult,
-                      options = list(scrollX = TRUE))
         }
     })
     
@@ -657,6 +725,55 @@ server <- function(input, output, session) {
                 
                 progress$set(message = "Begin to preprocess data, please wait...", value = 0.1)
                 
+                if(input$user_choose_pre_pro2gene == TRUE){
+                    df <- fileData
+                    tmp_origin <- lapply(strsplit(as.character(df[,1]), "\\;"), "[")    # type: list
+                    tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
+                    tmp_access <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
+                    for(i in array(1:length(colnames(tmp_df)))){
+                      tmp_access[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
+                    }
+                    
+                    mapping_geneid <- data.frame(ProteinName = tmp_access[,1])
+                    
+                    for(i in array(1:length(colnames(tmp_df)))){
+                      uniKeys <- as.character(tmp_access[,i])
+                      
+                      tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
+                      tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
+                      tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
+                      tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
+                      mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
+                    }
+                    
+                    mapping_geneid <- mapping_geneid[,-1]
+                    cols_ENTREZID = "ENTREZID"
+                    for(i in array(1:(length(colnames(mapping_geneid))-1))){
+                      cols_ENTREZID <- cols_ENTREZID %>% append(paste("ENTREZID", ".", i, sep = ""))
+                    }
+                    
+                    mapping_geneid <- tidyr::unite(mapping_geneid, "ENTREZID", cols_ENTREZID, sep=";", na.rm=TRUE)
+     
+                    fileData[,1] = mapping_geneid
+                } else {
+                    # Protein accession clean
+                    df <- fileData
+                    tmp_origin <- lapply(strsplit(as.character(df[,1]), "\\;"), "[")    # type: list
+                    tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
+                    tmp_access <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
+                    for(i in array(1:length(colnames(tmp_df)))){
+                      tmp_access[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
+                    }
+                    
+                    cols_proName = "ProteinName"
+                    for(i in array(1:(length(colnames(tmp_access))-1))){
+                      cols_proName <- cols_proName %>% append(paste("ProteinName", ".", i, sep = ""))
+                    }
+                    names(tmp_access) <- cols_proName
+                    pro_accession <- tidyr::unite(tmp_access, "ProteinName", cols_proName, sep=";", na.rm=TRUE)
+                    fileData[,1] = pro_accession
+                }
+                
                 progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
                 prePquant$DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
                                                                    logTrans = as.numeric(input$user_choose_logTrans),
@@ -694,49 +811,80 @@ server <- function(input, output, session) {
                 prePquant$DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
                                                                  data = prePquant$DDA2009.proposed,
                                                                  use_log_file = FALSE)
-                       
+                 
                 progress$set(message = "Begin to convert ID, please wait...", value = 0.8)
-                tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")    # type: list
-                tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
-                tmp <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
-                for(i in array(1:length(colnames(tmp_df)))){
-                    tmp[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
-                }
+                if(input$user_choose_pre_pro2gene == FALSE){
+                    #map protein accsession to geneID + geneName
+                  
+                    tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")
+                    tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
+                    tmp_access <- tmp_df
+            
+                    mapping_geneid <- data.frame(ProteinName = tmp_access[,1])
+                    mapping_genename <- data.frame(ProteinName = tmp_access[,1])
         
-                mapping_geneid <- data.frame(ProteinName = tmp[,1])
-                mapping_genename <- data.frame(ProteinName = tmp[,1])
-    
-                for(i in array(1:length(colnames(tmp_df)))){
-                    uniKeys <- as.character(tmp[,i])
+                    for(i in array(1:length(colnames(tmp_df)))){
+                        uniKeys <- as.character(tmp_access[,i])
+                        
+                        tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
+                        tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
+                        tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
+                        tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
+                        mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
+                        
+                        if(species == "YEAST"){
+                            tmp_genename <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="GENENAME", keytype="UNIPROT")
+                        } else {
+                            tmp_genename <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="SYMBOL", keytype="UNIPROT")
+                        }
+                        tmp_genename <- data.frame(matrix(lapply(tmp_genename, as.character)))
+                        tmp_genename <- unlist(lapply(tmp_genename[,1],function(x) if(identical(x,character(0))) NA else x))
+                        tmp_genename <- data.frame("GENENAME"=tmp_genename)
+                        mapping_genename <- cbind(mapping_genename, tmp_genename)
+                    }
+            
+                    mapping_geneid <- mapping_geneid[,-1]
+                    mapping_genename <- mapping_genename[,-1]
+                    cols_ENTREZID = "ENTREZID"
+                    cols_GENENAME = "GENENAME"
+                    for(i in array(1:(length(colnames(mapping_geneid))-1))){
+                        cols_ENTREZID <- cols_ENTREZID %>% append(paste("ENTREZID", ".", i, sep = ""))
+                        cols_GENENAME <- cols_GENENAME %>% append(paste("GENENAME", ".", i, sep = ""))
+                    }
+            
+                    mapping_geneid <- tidyr::unite(mapping_geneid, "ENTREZID", cols_ENTREZID, sep=";", na.rm=TRUE)
+                    mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
+            
+                    prePquant$DDA2009.comparisons$ComparisonResult$ENTREZID <- mapping_geneid$ENTREZID
+                    prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
                     
-                    tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
-                    tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
-                    tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
-                    tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
-                    mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
+                } else {
+                    # map geneID to geneName
+                    tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")
+                    tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
+                    mapping_geneid <- tmp_df
+                  
+                    mapping_genename <- data.frame(ProteinName = tmp_df[,1])
+                    for(i in array(1:length(colnames(mapping_geneid)))){
+                        uniKeys <- as.character(mapping_geneid[,i])
+                        tmp_genename <- clusterProfiler::bitr(uniKeys, OrgDb = db_type, fromType = "ENTREZID", toType = "SYMBOL")
+                        tmp_genename <- data.frame("GENENAME"=tmp_genename)
+                        colnames(tmp_genename)[1] <- 'geneid'
+                        
+                        tmp <- data.frame(mapping_geneid[,i])
+                        colnames(tmp)[1] <- 'geneid'
+                        tmp <- dplyr::left_join(tmp, tmp_genename, by = "geneid")
+                        mapping_genename <- cbind(mapping_genename, tmp[2])
+                    }
+                    mapping_genename <- mapping_genename[,-1]
+                    cols_GENENAME = "GENENAME.SYMBOL"
+                    for(i in array(1:(length(colnames(mapping_geneid))-1))){
+                        cols_GENENAME <- cols_GENENAME %>% append(paste("GENENAME.SYMBOL", ".", i, sep = ""))
+                    }
+                    mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
                     
-                    tmp_genename <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
-                    tmp_genename <- data.frame(matrix(lapply(tmp_genename, as.character)))
-                    tmp_genename <- unlist(lapply(tmp_genename[,1],function(x) if(identical(x,character(0))) NA else x))
-                    tmp_genename <- data.frame("GENENAME"=tmp_genename)
-                    mapping_genename <- cbind(mapping_genename, tmp_genename)
+                    prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
                 }
-        
-                mapping_geneid <- mapping_geneid[,-1]
-                mapping_genename <- mapping_genename[,-1]
-                cols_ENTREZID = "ENTREZID"
-                cols_GENENAME = "GENENAME"
-                for(i in array(1:(length(colnames(mapping_geneid))-1))){
-                    cols_ENTREZID <- cols_ENTREZID %>% append(paste("ENTREZID", ".", i, sep = ""))
-                    cols_GENENAME <- cols_GENENAME %>% append(paste("GENENAME", ".", i, sep = ""))
-                }
-        
-                mapping_geneid <- tidyr::unite(mapping_geneid, "ENTREZID", cols_ENTREZID, sep=";", na.rm=TRUE)
-                mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
-        
-                prePquant$DDA2009.comparisons$ComparisonResult$ENTREZID <- mapping_geneid$ENTREZID
-                prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
-        
                 ###
                 
                 dataControl$preprocess_judge <- 1
@@ -796,6 +944,7 @@ server <- function(input, output, session) {
         dataControl$inputData_rdata <- NULL
         dataControl$db_type <- NULL
         reset("download_name")
+        reset("user_choose_pre_pro2gene")
         
         reset("SaveProjectDataControl")
         reset("SaveProjectDataName")
@@ -822,6 +971,10 @@ server <- function(input, output, session) {
         volcanoLive$pdat <- NULL
         volcanoLive$res <- NULL
         volcanoLive$max_points <- NULL
+        volcanoLive$pepdat <- NULL
+        
+        renderCheck$proteus_peptide <- 0
+        renderCheck$proteus_protein <- 0
     })
     
     
@@ -901,13 +1054,27 @@ server <- function(input, output, session) {
     })
     
     
-    ### preprocessed data download
+    ### preprocessed data  &  download
+    output$preprocessedData <- renderDT({
+      if(is.null(prePquant$DDA2009.comparisons)){
+        return(NULL)
+      }
+      else{
+        tmp <- prePquant$DDA2009.comparisons$ComparisonResult
+        colnames(tmp)[1] <- 'Gene'
+        datatable(tmp,
+                  options = list(scrollX = TRUE))
+      }
+    })
+    
     output$download_Render <- downloadHandler(
         filename = function() {
             paste(input$download_name, ".csv", sep = "")
         },
         content = function(file) {
-            write.csv(prePquant$DDA2009.comparisons$ComparisonResult, file, row.names = FALSE)
+            tmp <- prePquant$DDA2009.comparisons$ComparisonResult
+            colnames(tmp)[1] <- 'Gene'
+            write.csv(tmp, file, row.names = FALSE)
         }
     )
     
@@ -1067,6 +1234,7 @@ server <- function(input, output, session) {
         volcanoLive$pdat <- NULL
         volcanoLive$res <- NULL
         volcanoLive$max_points <- NULL
+        volcanoLive$pepdat <- NULL
     })
     
     ### start_convert_to_proteus
@@ -1092,8 +1260,14 @@ server <- function(input, output, session) {
         fileData <- inputdf()
         dynamic_data <- unique(fileData[,grepl("Reference|Condition", colnames(fileData))])
         dynamic_data <- dynamic_data[order(dynamic_data$Condition),]
+        
         dynamic_condition <- sort(dynamic_data[,grepl("Condition", colnames(dynamic_data))])
         metadata <- data.frame(condition = dynamic_condition)
+        
+        dynamic_sample <- lapply(strsplit(dynamic_data$Reference, "\\.mzML"), "[")
+        dynamic_sample <- as.data.frame(sapply(dynamic_sample, "[", i = 1:max(sapply(dynamic_sample, length))))
+        colnames(dynamic_sample)[1] <- 'sample'
+        metadata <- cbind(metadata, dynamic_sample)
         return(metadata)
     })
     
@@ -1101,10 +1275,11 @@ server <- function(input, output, session) {
     output$dynamic_define_metadata <- renderRHandsontable({
         if (is.null(input$inputData)) { return(NULL) }
         else if ((dataControl$annoStart > 0) & (input$inputData != 0)) {
-          categorial_anno <- categorial_anno()
-          categorial_anno$condition <- as.character(categorial_anno$condition)
-          tab <- rhandsontable(categorial_anno)
-          return(tab)
+            categorial_anno <- categorial_anno()
+            categorial_anno$sample <- as.character(categorial_anno$sample)
+            categorial_anno$condition <- as.character(categorial_anno$condition)
+            tab <- rhandsontable(categorial_anno)
+            return(tab)
         } else { return(NULL) }
     })
     
@@ -1222,6 +1397,7 @@ server <- function(input, output, session) {
           pep2prot <- pep2prot[peptides,]
           proteins <- levels(as.factor(pep2prot$protein))
           
+          volcanoLive$pepdat <- ptab
           
           progress$set(message = "Begin to preprocess data, please wait...", value = 0.7)
           ### makeProteinTable
@@ -1324,11 +1500,17 @@ server <- function(input, output, session) {
         rownames(volcanoLive$res) <- c(1:nrow(volcanoLive$res))
         
         progress$set(message = "Preprocessing is over.", value = 1)
+        
+        if(input$user_choose_pre_pro2gene == FALSE){
+            dynamic_signif_flag = "n"
+        } else {
+            dynamic_signif_flag = "y"
+        }
 
         output$dynamic_gap_out <- renderUI({HTML('<br/>')})
         
         output$dynamic_replicateTable_out <- dynamic_replicateTable(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points)
-        output$dynamic_significanceTable_out <- dynamic_significanceTable(volcanoLive$res, volcanoLive$res, input)
+        output$dynamic_significanceTable_out <- dynamic_significanceTable(volcanoLive$res, volcanoLive$res, input, dynamic_signif_flag)
         output$dynamic_jitterPlot_out <- dynamic_jitterPlot(volcanoLive$res, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
         
         
@@ -1434,18 +1616,24 @@ server <- function(input, output, session) {
       
       progress$set(message = "Preprocessing is over.", value = 1)
       
+      if(input$user_choose_pre_pro2gene == FALSE){
+        dynamic_signif_flag = "n"
+      } else {
+        dynamic_signif_flag = "y"
+      }
+      
       output$dynamic_FID_gap_out <- renderUI({HTML('<br/>')})
       
-      output$dynamic_FID_replicateTable_out <- dynamic_replicateTable(fi, input, volcanoLive$pdat, volcanoLive$max_points)
-      output$dynamic_FID_significanceTable_out <- dynamic_significanceTable(fi, volcanoLive$res_FID, input)
-      output$dynamic_FID_jitterPlot_out <- dynamic_jitterPlot(fi, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
+      output$dynamic_FID_replicateTable_out <- dynamic_fid_replicateTable(fi, input, volcanoLive$pdat, volcanoLive$max_points)
+      output$dynamic_FID_significanceTable_out <- dynamic_fid_significanceTable(fi, volcanoLive$res_FID, input, dynamic_signif_flag)
+      output$dynamic_FID_jitterPlot_out <- dynamic_fid_jitterPlot(fi, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
       
       
       ## FID plot
       output$dynamic_plotFID_out <- renderPlot({
           if (renderCheck$dynamic_FID > 0) {
               tab_idx <- as.numeric(input$allProteinTable_rows_selected)
-              pFID <- dynamic_plotFID(volcanoLive$pdat, condition, FID_pair, binhex=FALSE)
+              pFID <- dynamic_fid_plotFID(volcanoLive$pdat, condition, FID_pair, binhex=FALSE)
               if(length(tab_idx) > 0) {
                   pFID <- pFID + geom_point(data=fi[tab_idx,], size=3, color='red')
               }
@@ -1469,8 +1657,143 @@ server <- function(input, output, session) {
     })
     
     
-
     
+    ##### -----Proteus method-----
+    
+    ## annotation check control
+    
+    observe({
+        shinyjs::toggleState("proteus_peptide_Render", input$submit_anno == TRUE)
+        shinyjs::toggleState("proteus_protein_Render", input$submit_anno == TRUE)
+    })
+    
+    ## proteus: peptide data
+    
+    observeEvent(input$proteus_peptide_Render, {
+        renderCheck$proteus_peptide <- 1
+        
+        progress <- shiny::Progress$new()
+        on.exit(progress$close())
+        
+        progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
+        
+        fileData <- inputdf()
+        proteus_colnames <- c("PeptideSequence", "modified_sequence", "modifications", "protein_group", "protein",
+                              "experiment", "charge", "intensity", "sequence", "accession")
+        
+        df <- as.data.frame(matrix(nrow=length(rownames(fileData)),ncol=10))
+        names(df) <- proteus_colnames
+        
+        df$protein_group <- fileData$ProteinName
+        df$charge <- fileData$PrecursorCharge
+        df$intensity <- fileData$Intensity
+        
+        df_experiment <- lapply(strsplit(fileData$Reference, "\\.mzML"), "[")
+        df_experiment <- sapply(df_experiment, "[", i = 1:max(sapply(df_experiment, length)))
+        df$experiment <- df_experiment
+        
+        df_protein <- lapply(strsplit(fileData$ProteinName, "\\;"), "[", 1)
+        df_protein <- sapply(df_protein, "[", i = 1:max(sapply(df_protein, length)))
+        df$protein <- df_protein
+
+        df$sequence <- fileData$PeptideSequence
+        
+        progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
+        
+        dynamic_data <- unique(fileData[,grepl("Reference|Condition", colnames(fileData))])
+        dynamic_data <- dynamic_data[order(dynamic_data$Condition),]
+        
+        dynamic_condition <- sort(dynamic_data[,grepl("Condition", colnames(dynamic_data))])
+        metadata <- data.frame(condition = dynamic_condition)
+        
+        dynamic_sample <- lapply(strsplit(dynamic_data$Reference, "\\.mzML"), "[")
+        dynamic_sample <- as.data.frame(sapply(dynamic_sample, "[", i = 1:max(sapply(dynamic_sample, length))))
+        colnames(dynamic_sample)[1] <- 'sample'
+        metadata <- cbind(metadata, dynamic_sample)
+        
+        measure <- rep("Intensity", length(rownames(metadata)))
+        metadata <- cbind(measure, metadata)
+        
+        experiment <- metadata$sample
+        metadata <- cbind(experiment, metadata)
+        
+        progress$set(message = "Begin to preprocess data, please wait...", value = 0.6)
+        pepdat <- proteus::makePeptideTable(df, metadata)
+        progress$set(message = "Begin to preprocess data, please wait...", value = 0.8)
+        prodat <- proteus::makeProteinTable(pepdat)
+        progress$set(message = "Begin to preprocess data, please wait...", value = 0.9)
+        prodat.med <- normalizeData(prodat)
+        
+        progress$set(message = "Preprocessing is over.", value = 1)
+        
+        output$proteus_peptide_summary_out <- renderPrint({
+            if(renderCheck$proteus_peptide > 0){
+                summary(pepdat)
+            } else { return(NULL) }
+        })
+        
+        output$proteus_peptide_distance_out <- renderPlot({
+            if(renderCheck$proteus_peptide > 0){
+                proteus::plotDistanceMatrix(pepdat)
+            } else { return(NULL) }
+        })
+        
+        output$proteus_peptide_number_out <- renderPlot({
+            if(renderCheck$proteus_peptide > 0){
+                proteus::plotCount(pepdat)
+            } else { return(NULL) }
+        })
+        
+        output$proteus_peptide_jaccard_out <- renderPlot({
+            if(renderCheck$proteus_peptide > 0){
+                proteus::plotDetectionSimilarity(pepdat, bin.size = 0.02)
+            } else { return(NULL) }
+        })
+        
+        output$proteus_peptide_clustering_out <- renderPlot({
+            if(renderCheck$proteus_peptide > 0){
+                proteus::plotClustering(pepdat)
+            } else { return(NULL) }
+        })
+        
+        output$proteus_peptide_pca_out <- renderPlot({
+            if(renderCheck$proteus_peptide > 0){
+                plotPCA(volcanoLive$pepdat, dynamic_metadata())
+            } else { return(NULL) }
+        })
+        
+        
+        ## proteus: protein data
+        observeEvent(input$proteus_protein_Render, {
+            renderCheck$proteus_protein <- 1
+        })
+        
+        output$proteus_protein_summary_out <- renderPrint({
+            if(renderCheck$proteus_protein > 0){
+                summary(prodat)
+            } else { return(NULL) }
+        })
+        
+        output$proteus_protein_normalization_median_out <- renderPlot({
+            if(renderCheck$proteus_protein > 0){
+                proteus::plotSampleDistributions(prodat.med, title="Median normalization", fill="condition", method="violin")
+            } else { return(NULL) }
+        })
+        
+        output$proteus_protein_mean_out <- renderPlot({
+            if(renderCheck$proteus_protein > 0){
+                proteus::plotMV(prodat.med, with.loess=TRUE)
+            } else { return(NULL) }
+        })
+        
+        output$proteus_protein_clustering_out <- renderPlot({
+            if(renderCheck$proteus_protein > 0){
+                proteus::plotClustering(prodat.med)
+            } else { return(NULL) }
+        })
+        
+    })
+  
 }
 
 # Run the app ----
