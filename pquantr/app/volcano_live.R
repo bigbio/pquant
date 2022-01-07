@@ -56,9 +56,8 @@ dynamic_significanceTable <- function(tab, res, input, flag) {
               `adjusted P-value`=sprintf("%.2g", res$adj.pvalue[sel]),
               check.names = FALSE)
         }
-      
-    }
     return(df)
+    } else { return(NULL) }
   }, width = "100%",
   options = list(lengthChange = FALSE, scrollX = TRUE, searching = FALSE))
 }
