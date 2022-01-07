@@ -16,7 +16,9 @@ library(IDPmisc)
 library(data.table)
 library(dplyr)
 library(tidyr)
+library(clusterProfiler)
 library(proteus)
+library(MSstatsTMT)
 
 library(org.Hs.eg.db)
 library(org.Sc.sgd.db)
@@ -27,12 +29,7 @@ source("./app/getSelector.R")
 source("./app/volcano_live.R")
 source("./app/FID_live.R")
 source("./app/proteus_plots.R")
-
-
-LoadToEnvironment <- function(RData, env=new.env()) {
-    load(RData, env)
-    return(env)
-}
+source("./app/TMT_plots.R")
 
   
 ui <- dashboardPage(
@@ -72,7 +69,14 @@ ui <- dashboardPage(
                                                                              multiple = FALSE,
                                                                              accept = c(".csv",
                                                                                         ".gz",
-                                                                                        ".RData"))),
+                                                                                        ".RData"))),br(),
+                                                          div(style = "text-align:left", 
+                                                              "Pre: Proteins to Gene Accessions"),  
+                                                          switchInput(inputId = "user_choose_pre_pro2gene",
+                                                                      onLabel = "Yes", offLabel = "No",
+                                                                      onStatus = "primary", offStatus = "default",
+                                                                      value = FALSE),
+                                                          helpText("You could perform gene expression analysis coming from the peptide info by choose 'Yes'."),
                                                           tags$hr(),
                                                           actionButton(inputId = "uploaddata_reset",
                                                                        label = "Reset all data",
@@ -81,16 +85,8 @@ ui <- dashboardPage(
                     
                                                  ),
                                                  
-                                                 menuItem("Parameters selection", #startExpanded = TRUE,
+                                                 menuItem("Parameters selection (LFQ)", #startExpanded = TRUE,
                                                           icon = icon("cogs"),br(),
-                                                          div(style = "text-align:left", 
-                                                              "Pre: Proteins to Gene Accessions"),  
-                                                          switchInput(inputId = "user_choose_pre_pro2gene",
-                                                                      onLabel = "Yes", offLabel = "No",
-                                                                      onStatus = "primary", offStatus = "default",
-                                                                      value = FALSE),
-                                                          helpText("You could perform gene expression analysis coming from the peptide info by choose 'Yes'."),
-                                                          
                                                           radioButtons(inputId = "user_choose_logTrans",
                                                                        label = "Choose logarithm transformation",
                                                                        choices = c("2" = "2",
@@ -116,11 +112,30 @@ ui <- dashboardPage(
                                                                        value = 0.999),br()
                                                  ),
                                                  
+                                                 menuItem("Parameters selection (TMT)",
+                                                          icon = icon("cogs"),br(),
+                                                          radioButtons(inputId = "user_choose_TMT_method",
+                                                                       label = "Choose logarithm transformation",
+                                                                       choices = c("MSstats" = "msstats",
+                                                                                   "MedianPolish" = "MedianPolish",
+                                                                                   "Median" = "Median",
+                                                                                   "LogSum" = "LogSum"),
+                                                                       selected = "msstats"),
+                                                          radioButtons(inputId = "user_choose_TMT_global_norm",
+                                                                       label = "Global median normalization on peptide level data",
+                                                                       choices = c("Yes" = "TRUE",
+                                                                                   "No" = "FALSE"),
+                                                                       selected = "TRUE"),
+                                                          numericInput(inputId = "user_choose_TMT_maxQuantileforCensored",
+                                                                       label = "Choose maxQuantile for deciding censored missing values",
+                                                                       value = NULL),br()
+                                                 ),
+                                                 
                                                  
                                                  menuItem("Start preprocessing",
                                                           icon = icon("play"),br(),
                                                           div(style = "text-align:left", 
-                                                              "Save preprocessed data to local?"),     
+                                                              "Save preprocessed data to .RData?"),     
                                                           switchInput(inputId = "SaveProjectDataControl",
                                                                       onLabel = "Yes", offLabel = "No",
                                                                       onStatus = "primary", offStatus = "default",
@@ -196,7 +211,8 @@ ui <- dashboardPage(
                                                                    actionButton(inputId = "default_method_heatmap_Render",
                                                                                 label = "Render Plot",
                                                                                 icon = icon("play-circle"),
-                                                                                style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
+                                                                                style ="display: block; margin: 0 auto; width: 200px;color: black;"),br(),
+                                                                   helpText("When there is only one set of comparisons, no heat map is generated.")
                                                           ),br(),
                                                           menuItem("Comparison plot",
                                                                    br(),
@@ -263,24 +279,39 @@ ui <- dashboardPage(
                     conditionalPanel(condition = "input.main_tabs == 'proteus_condition'",br(),
                                      div(style = "text-align:center",
                                          "Use this part function must",br(),
-                                         "submit annotation in 'Dynamic plots'",br()),br(),
+                                         "submit annotation in 'Dynamic plots'",br()),
+                                     tags$hr(),
                                      sidebarMenu(
-                                                 menuItem("Peptide data",br(),
-                                                          icon = icon("images"),
-                                                          actionButton(inputId = "proteus_peptide_Render",
-                                                                       label = "Render Plots",
-                                                                       icon = icon("play-circle"),
-                                                                       style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
+                                                 menuItem("LFQ",br(),
+                                                          menuItem("Peptide data",br(),
+                                                                   icon = icon("images"),
+                                                                   actionButton(inputId = "proteus_peptide_Render",
+                                                                                label = "Render Plots",
+                                                                                icon = icon("play-circle"),
+                                                                                style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()),br(),
+                                                          menuItem("Protein data",br(),
+                                                                   icon = icon("images"),
+                                                                   actionButton(inputId = "proteus_protein_Render",
+                                                                                label = "Render Plots",
+                                                                                icon = icon("play-circle"),
+                                                                                style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()),br()
                                                  ),
-                                                 menuItem("Protein data",br(),
-                                                          icon = icon("images"),
-                                                          actionButton(inputId = "proteus_protein_Render",
-                                                                       label = "Render Plots",
-                                                                       icon = icon("play-circle"),
-                                                                       style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()
+                                                 menuItem("TMT",br(),
+                                                          menuItem("Peptide data",br(),
+                                                                   icon = icon("images"),
+                                                                   actionButton(inputId = "proteus_TMT_peptide_Render",
+                                                                                label = "Render Plots",
+                                                                                icon = icon("play-circle"),
+                                                                                style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()),br(),
+                                                          menuItem("Protein data",br(),
+                                                                   icon = icon("images"),
+                                                                   actionButton(inputId = "proteus_TMT_protein_Render",
+                                                                                label = "Render Plots",
+                                                                                icon = icon("play-circle"),
+                                                                                style ="display: block; margin: 0 auto; width: 200px;color: black;"),br()),br()
                                                  )
+                                                 
                                      )
-                      
                     )
     ),
   
@@ -344,28 +375,31 @@ ui <- dashboardPage(
                               tabPanel(title = 'MSstats method',
                                        value = 'default_method_condition',
                                        icon = icon("chart-area"),
-                                       tabBox(# No title
-                                              id = "msstats_tabbox", selected = "msstats_tabbox_modelbased", width = 12,
-                                              tabPanel(
-                                                       title = "Model-based QC plots", value = "msstats_tabbox_modelbased",
-                                                       fluidRow(
-                                                                column(6,
-                                                                       plotOutput("default_method_residualPlot_out")),
-                                                                column(6,
-                                                                       plotOutput("default_method_qqPlot_out")))
-                                              ),
-                                              tabPanel(
-                                                       title = "Group comparison plots", value = "msstats_tabbox_groupcomparison",
-                                                       fluidRow(
-                                                                column(6,
-                                                                       plotOutput("default_method_volcano_out")),
-                                                                column(6,
-                                                                       plotOutput("default_method_heat_out"))),br(),
-                                                       fluidRow(
-                                                                column(6,
-                                                                       plotOutput("default_method_comparisonPlot_out")))
-                                              )
-                                       )
+                                       fluidPage(
+                                                 tabBox(# No title
+                                                        id = "msstats_tabbox", selected = "msstats_tabbox_modelbased", width = 12,
+                                                        tabPanel(
+                                                                 title = "Model-based QC plots", value = "msstats_tabbox_modelbased",
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 plotOutput("default_method_residualPlot_out")),
+                                                                          column(6,
+                                                                                 plotOutput("default_method_qqPlot_out")))
+                                                        ),
+                                                        tabPanel(
+                                                                 title = "Group comparison plots", value = "msstats_tabbox_groupcomparison",
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 plotOutput("default_method_volcano_out")),
+                                                                          column(6,
+                                                                                 plotOutput("default_method_heat_out"))),br(),
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 plotOutput("default_method_comparisonPlot_out")))
+                                                        )
+                                                 )
+                                       ),
+                                       
                               ),
                       
                       
@@ -410,7 +444,7 @@ ui <- dashboardPage(
                                                                          column(width = 12,
                                                                                 DT::dataTableOutput("dynamic_allProteinTable_out")))
                                                        ),
-                                                       tabPanel(title = "Fold-change-intensity plot", value = "dynamic_tabbox_plot2",
+                                                       tabPanel(title = "Fold-change-intensity plot (not support TMT data)", value = "dynamic_tabbox_plot2",
                                                                 
                                                                 ### from Proteus: live.R
                                                                 fluidRow(
@@ -445,43 +479,61 @@ ui <- dashboardPage(
                                        value = 'proteus_condition',
                                        icon = icon("chart-area"),
                                        fluidPage(
-                                           tabBox(# No title
-                                                  id = "proteus_tabbox", selected = "proteus_tabbox_peptide", width = 12,
-                                                  tabPanel(
-                                                           title = "Peptide data", value = "proteus_tabbox_peptide",
-                                                           fluidRow(
-                                                                    column(6,
-                                                                           verbatimTextOutput("proteus_peptide_summary_out")),
-                                                                    column(6,
-                                                                           plotOutput("proteus_peptide_distance_out"))),br(),
-                                                           fluidRow(
-                                                                    column(6,
-                                                                           plotOutput("proteus_peptide_number_out")),
-                                                                    column(6,
-                                                                           plotOutput("proteus_peptide_jaccard_out"))),br(),
-                                                           fluidRow(
-                                                                    column(6,
-                                                                           plotOutput("proteus_peptide_pca_out")),
-                                                                    column(6,
-                                                                           plotOutput("proteus_peptide_clustering_out")))
-                                                  ),
-                                                  tabPanel(
-                                                           title = "Protein data", value = "proteus_tabbox_protein",
-                                                           fluidRow(
-                                                                    column(6,
-                                                                           verbatimTextOutput("proteus_protein_summary_out")),
-                                                                    column(6,
-                                                                           plotOutput("proteus_protein_normalization_median_out"))),br(),
-                                                           fluidRow(
-                                                                    column(6,
-                                                                           plotOutput("proteus_protein_mean_out")),
-                                                                    column(6,
-                                                                           plotOutput("proteus_protein_clustering_out")))
-                                                  )
-                                           )
+                                                 tabBox(# No title
+                                                        id = "proteus_tabbox", selected = "proteus_tabbox_peptide", width = 12,
+                                                        tabPanel(
+                                                                 title = "Peptide data (LFQ)", value = "proteus_tabbox_peptide",
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 verbatimTextOutput("proteus_peptide_summary_out")),
+                                                                          column(6,
+                                                                                 plotOutput("proteus_peptide_number_out"))),br(),
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 plotOutput("proteus_peptide_distance_out")),
+                                                                          column(6,
+                                                                                 plotOutput("proteus_peptide_jaccard_out"))),br(),
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 plotOutput("proteus_peptide_pca_out")),
+                                                                          column(6,
+                                                                                 plotOutput("proteus_peptide_clustering_out")))
+                                                        ),
+                                                        tabPanel(
+                                                                 title = "Protein data (LFQ)", value = "proteus_tabbox_protein",
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 verbatimTextOutput("proteus_protein_summary_out")),
+                                                                          column(6,
+                                                                                 plotOutput("proteus_protein_normalization_median_out"))),br(),
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 plotOutput("proteus_protein_mean_out")),
+                                                                          column(6,
+                                                                                 plotOutput("proteus_protein_clustering_out")))
+                                                        ),
+                                                        tabPanel(
+                                                                 title = "Peptide data (TMT)", value = "proteus_TMT_tabbox_peptide",
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 verbatimTextOutput("proteus_TMT_peptide_summary_out")),
+                                                                          column(6,
+                                                                                 plotOutput("proteus_TMT_peptide_number_out")))
+                                                        ),
+                                                        tabPanel(
+                                                                 title = "Protein data (TMT)", value = "proteus_TMT_tabbox_protein",
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 verbatimTextOutput("proteus_TMT_protein_summary_out")),
+                                                                          column(6,
+                                                                                 plotOutput("proteus_TMT_protein_normalization_median_out"))),br(),
+                                                                 fluidRow(
+                                                                          column(6,
+                                                                                 plotOutput("proteus_TMT_protein_clustering_out")))
+                                                        )
+                                                 )
                                        )
                               )
-                      
                       
                               # enrichment analysis tab
                               #tabPanel(title = "Enrichment analysis",value = "enrichment_analsis")
@@ -499,11 +551,15 @@ ui <- dashboardPage(
 server <- function(input, output, session) {
     options(shiny.maxRequestSize=520*1024^2)
     options(ggrepel.max.overlaps = Inf)
+    
+    env <<- NULL
   
     prePquant <- reactiveValues(DDA2009.proposed = NULL,
                                 DDA2009.comparisons = NULL,
                                 inputData_rdata_out_msstats = NULL,
-                                inputData_URL_out_msstats = NULL)
+                                inputData_URL_out_msstats = NULL,
+                                quant.msstats = NULL,
+                                test.pairwise = NULL)
     
     renderCheck <- reactiveValues(initialData_qualitycontrolPlot = 0,
                                   initialData_profilecondition = 0,
@@ -514,13 +570,20 @@ server <- function(input, output, session) {
                                   dynamic_volcano = 0,
                                   dynamic_FID = 0,
                                   proteus_peptide = 0,
-                                  proteus_protein = 0)
+                                  proteus_protein = 0,
+                                  proteus_pep_pro = 0,
+                                  proteus_TMT_peptide = 0,
+                                  proteus_TMT_protein = 0)
     
     volcanoLive <- reactiveValues(pdat = NULL,
                                   pepdat = NULL,
+                                  prolfq_pepdat = NULL,
+                                  prolfq_prodat.med = NULL,
                                   res = NULL,
                                   res_FID = NULL,
-                                  max_points = NULL)
+                                  max_points = NULL,
+                                  protmt_pepd = NULL,
+                                  protmt_prod = NULL)
     
     dataControl <- reactiveValues(annoStart = 0,
                                   annoSubmit = 0,
@@ -528,7 +591,8 @@ server <- function(input, output, session) {
                                   inputData_rdata = NULL,
                                   inputData_URL_state = NULL,
                                   preprocess_judge = 0,
-                                  db_type = NULL)
+                                  db_type = NULL,
+                                  data_type = "NULL")
 
     # -------------input---------------
     
@@ -572,30 +636,39 @@ server <- function(input, output, session) {
     
     ### load .rdata
     observeEvent(input$inputData, {
-      if(is.null(dataControl$inputData_rdata) != TRUE){
-        sendSweetAlert(
-          session = session,
-          title = "Success",
-          text = "You are loading 'DDA2009.RData', please wait until done to the next step.",
-          type = "success", 
-          closeOnClickOutside = TRUE,
-          width = 400
-        )
-        
-        progress <- shiny::Progress$new()
-        on.exit(progress$close())
-        
-        progress$set(message = "Begin to load data, please wait...", value = 0.5)
-        
-        env <- reactiveFileReader(1000, session, input$inputData$datapath, LoadToEnvironment)
-        #print(names(env()))  [1] "inputData_rdata_out_msstats" "DDA2009.comparisons"         "DDA2009.TMP"                 "DDA2009.proposed"
-        prePquant$inputData_rdata_out_msstats <- env()[[names(env())[1]]]
-        prePquant$DDA2009.proposed <- env()[[names(env())[3]]]
-        prePquant$DDA2009.comparisons <- env()[[names(env())[2]]]
-        
-        progress$set(message = "Load over.", value = 1)
-        
-      }
+        if(is.null(dataControl$inputData_rdata) != TRUE){
+            sendSweetAlert(
+              session = session,
+              title = "Success",
+              text = "You are loading 'DDA2009.RData', please wait until done to the next step.",
+              type = "success", 
+              closeOnClickOutside = TRUE,
+              width = 400
+            )
+            
+            progress <- shiny::Progress$new()
+            on.exit(progress$close())
+            
+            progress$set(message = "Begin to load data, please wait...", value = 0.5)
+           
+            n.env <- new.env()
+            env <<- n.env
+            load(input$inputData$datapath, envir = n.env)
+            
+            prePquant$inputData_rdata_out_msstats <- n.env$inputData_rdata_out_msstats
+            if(sum("Mixture" == colnames(prePquant$inputData_rdata_out_msstats)) == 1){
+                prePquant$test.pairwise <- n.env$test.pairwise
+                prePquant$quant.msstats <- n.env$quant.msstats
+                dataControl$data_type <- "TMT"
+            }else{
+                prePquant$DDA2009.proposed <- n.env$DDA2009.proposed
+                prePquant$DDA2009.comparisons <- n.env$DDA2009.comparisons
+                dataControl$data_type <- "LFQ"
+            }
+            
+            progress$set(message = "Load over.", value = 1)
+          
+        }
     })
 
         
@@ -618,9 +691,11 @@ server <- function(input, output, session) {
     })
     
     observe({
-        if(is.null(prePquant$DDA2009.comparisons)){
-            disable("download_Render")}
-        else{enable("download_Render")}
+        if(is.null(prePquant$DDA2009.comparisons) & is.null(prePquant$test.pairwise)){
+            disable("download_Render")
+        }else{
+            enable("download_Render")
+        }
     })
     
     # project name control
@@ -676,8 +751,8 @@ server <- function(input, output, session) {
       
         fileData <- inputdf()
         
-        len <- length(unlist(lapply(strsplit(as.character(fileData[1,1]), "\\_"), "[")))
-        species <- unlist(lapply(strsplit(as.character(fileData[1,1]), "\\_"), "[", len))
+        len <- length(unlist(lapply(strsplit(as.character(fileData$ProteinName[1]), "\\_"), "[")))
+        species <- unlist(lapply(strsplit(as.character(fileData$ProteinName[1]), "\\_"), "[", len))
         if(species == "HUMAN"){
             db_type = org.Hs.eg.db
         }else if(species == "YEAST"){
@@ -698,7 +773,14 @@ server <- function(input, output, session) {
                 width = 400
             )
         }else{
-            if(sum("Fraction" == colnames(fileData)) == 1 & input$user_choose_summaryMethod == 'TMP')
+            if(sum("Mixture" == colnames(fileData)) == 1){
+                dataControl$data_type <- "TMT"
+            }else{
+                dataControl$data_type <- "LFQ"
+            }
+          
+            if(sum("Fraction" == colnames(fileData)) == 1 & input$user_choose_summaryMethod == 'TMP'
+               & dataControl$data_type == "LFQ")
             {
                 sendSweetAlert(
                     session = session,
@@ -727,96 +809,131 @@ server <- function(input, output, session) {
                 
                 if(input$user_choose_pre_pro2gene == TRUE){
                     df <- fileData
-                    tmp_origin <- lapply(strsplit(as.character(df[,1]), "\\;"), "[")    # type: list
+                    tmp_origin <- lapply(strsplit(as.character(df$ProteinName), "\\;"), "[")    # type: list
                     tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
                     tmp_access <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
                     for(i in array(1:length(colnames(tmp_df)))){
-                      tmp_access[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
+                        tmp_access[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
                     }
                     
                     mapping_geneid <- data.frame(ProteinName = tmp_access[,1])
                     
                     for(i in array(1:length(colnames(tmp_df)))){
-                      uniKeys <- as.character(tmp_access[,i])
-                      
-                      tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
-                      tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
-                      tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
-                      tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
-                      mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
+                        uniKeys <- as.character(tmp_access[,i])
+                        
+                        tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
+                        tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
+                        tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
+                        tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
+                        mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
                     }
                     
                     mapping_geneid <- mapping_geneid[,-1]
                     cols_ENTREZID = "ENTREZID"
                     for(i in array(1:(length(colnames(mapping_geneid))-1))){
-                      cols_ENTREZID <- cols_ENTREZID %>% append(paste("ENTREZID", ".", i, sep = ""))
+                        cols_ENTREZID <- cols_ENTREZID %>% append(paste("ENTREZID", ".", i, sep = ""))
                     }
                     
                     mapping_geneid <- tidyr::unite(mapping_geneid, "ENTREZID", cols_ENTREZID, sep=";", na.rm=TRUE)
      
-                    fileData[,1] = mapping_geneid
+                    fileData$ProteinName = mapping_geneid
                 } else {
                     # Protein accession clean
                     df <- fileData
-                    tmp_origin <- lapply(strsplit(as.character(df[,1]), "\\;"), "[")    # type: list
+                    tmp_origin <- lapply(strsplit(as.character(df$ProteinName), "\\;"), "[")    # type: list
                     tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
                     tmp_access <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
                     for(i in array(1:length(colnames(tmp_df)))){
-                      tmp_access[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
+                        tmp_access[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
                     }
                     
                     cols_proName = "ProteinName"
                     for(i in array(1:(length(colnames(tmp_access))-1))){
-                      cols_proName <- cols_proName %>% append(paste("ProteinName", ".", i, sep = ""))
+                        cols_proName <- cols_proName %>% append(paste("ProteinName", ".", i, sep = ""))
                     }
                     names(tmp_access) <- cols_proName
                     pro_accession <- tidyr::unite(tmp_access, "ProteinName", cols_proName, sep=";", na.rm=TRUE)
-                    fileData[,1] = pro_accession
+                    fileData$ProteinName = pro_accession
                 }
                 
                 progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
-                prePquant$DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
-                                                                   logTrans = as.numeric(input$user_choose_logTrans),
-                                                                   normalization = input$user_choose_normalization,
-                                                                   summaryMethod = input$user_choose_summaryMethod,
-                                                                   maxQuantileforCensored = input$user_choose_maxQuantileforCensored,
-                                                                   censoredInt = "NA",
-                                                                   MBimpute = TRUE,
-                                                                   use_log_file = FALSE)
-                
-                progress$set(message = "Begin to generate group comparison, please wait...", value = 0.5)
-                # Automatically create the manually created matrix in MSstats, user manual p23
-                len <- length(levels(prePquant$DDA2009.proposed$FeatureLevelData$GROUP))
-                
-                tmp <- t(combn(len,2))
-                matrix_len = length(t(combn(len,2))) / 2
-                
-                ourMatrix <- matrix(c(0:0),nrow=matrix_len,ncol=len)
-                
-                for(i in 1:matrix_len){
-                  ourMatrix[i, tmp[i]] = -1
-                  ourMatrix[i, tmp[i + matrix_len]] = 1
+                # data type: LFQ
+                if(dataControl$data_type == "LFQ"){
+                    prePquant$DDA2009.proposed <- MSstats::dataProcess(raw = fileData,
+                                                                       logTrans = as.numeric(input$user_choose_logTrans),
+                                                                       normalization = input$user_choose_normalization,
+                                                                       summaryMethod = input$user_choose_summaryMethod,
+                                                                       maxQuantileforCensored = input$user_choose_maxQuantileforCensored,
+                                                                       censoredInt = "NA",
+                                                                       MBimpute = TRUE,
+                                                                       use_log_file = FALSE)
+                    
+                    progress$set(message = "Begin to generate group comparison, please wait...", value = 0.5)
+                    # Automatically create the manually created matrix in MSstats, user manual p23
+                    len <- length(levels(prePquant$DDA2009.proposed$FeatureLevelData$GROUP))
+                    
+                    tmp <- t(combn(len,2))
+                    matrix_len = length(t(combn(len,2))) / 2
+                    
+                    ourMatrix <- matrix(c(0:0),nrow=matrix_len,ncol=len)
+                    
+                    for(i in 1:matrix_len){
+                        ourMatrix[i, tmp[i]] = -1
+                        ourMatrix[i, tmp[i + matrix_len]] = 1
+                    }
+                    
+                    ourCondition <- levels(prePquant$DDA2009.proposed$ProteinLevelData$GROUP)
+                    tmp_name <- matrix(ourCondition, nr=len, nc=1)
+                    name <- matrix(nr=matrix_len, nc=1)
+                    for(i in 1:matrix_len){
+                        name[i,1] <- sprintf('%s-%s', tmp_name[tmp[i+matrix_len]], tmp_name[tmp[i]])
+                    }
+                    row.names(ourMatrix) <- name
+                    
+                    #End of creation
+                    colnames(ourMatrix) <- ourCondition
+                    prePquant$DDA2009.comparisons <- MSstats::groupComparison(contrast.matrix = ourMatrix,
+                                                                              data = prePquant$DDA2009.proposed,
+                                                                              use_log_file = FALSE)
+                }else{
+                    # data type: TMT
+                    input.om <- OpenMStoMSstatsTMTFormat(fileData, use_log_file = FALSE)
+                    if(is.na(input$user_choose_TMT_maxQuantileforCensored)){
+                        prePquant$quant.msstats <- MSstatsTMT::proteinSummarization(input.om,
+                                                                                    method = input$user_choose_TMT_method,
+                                                                                    global_norm = as.logical(input$user_choose_TMT_global_norm),
+                                                                                    reference_norm = TRUE,
+                                                                                    remove_norm_channel = TRUE,
+                                                                                    remove_empty_channel = TRUE,
+                                                                                    maxQuantileforCensored = NULL,
+                                                                                    use_log_file = FALSE) 
+                    }else{
+                        prePquant$quant.msstats <- MSstatsTMT::proteinSummarization(input.om,
+                                                                                    method = input$user_choose_TMT_method,
+                                                                                    global_norm = as.logical(input$user_choose_TMT_global_norm),
+                                                                                    reference_norm = TRUE,
+                                                                                    remove_norm_channel = TRUE,
+                                                                                    remove_empty_channel = TRUE,
+                                                                                    maxQuantileforCensored = input$user_choose_TMT_maxQuantileforCensored,
+                                                                                    use_log_file = FALSE)}
+                    
+                    progress$set(message = "Begin to generate group comparison, please wait...", value = 0.5)
+                    # test for all the possible pairs of conditions
+                    prePquant$test.pairwise <- MSstatsTMT::groupComparisonTMT(prePquant$quant.msstats,
+                                                                              moderated = TRUE,
+                                                                              save_fitted_models = TRUE,
+                                                                              use_log_file = FALSE)
+
                 }
                 
-                ourCondition <- levels(prePquant$DDA2009.proposed$ProteinLevelData$GROUP)
-                tmp_name <- matrix(ourCondition, nr=len, nc=1)
-                name <- matrix(nr=matrix_len, nc=1)
-                for(i in 1:matrix_len){
-                  name[i,1] <- sprintf('%s-%s', tmp_name[tmp[i+matrix_len]], tmp_name[tmp[i]])
-                }
-                row.names(ourMatrix) <- name
-                
-                #End of creation
-                colnames(ourMatrix) <- ourCondition
-                prePquant$DDA2009.comparisons <- groupComparison(contrast.matrix = ourMatrix,
-                                                                 data = prePquant$DDA2009.proposed,
-                                                                 use_log_file = FALSE)
-                 
                 progress$set(message = "Begin to convert ID, please wait...", value = 0.8)
                 if(input$user_choose_pre_pro2gene == FALSE){
                     #map protein accsession to geneID + geneName
-                  
-                    tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")
+                    if(dataControl$data_type == "LFQ"){
+                        tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")
+                    }else{
+                        tmp_origin <- lapply(strsplit(as.character(prePquant$test.pairwise$ComparisonResult$Protein), "\\;"), "[")
+                    }
                     tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
                     tmp_access <- tmp_df
             
@@ -854,38 +971,50 @@ server <- function(input, output, session) {
             
                     mapping_geneid <- tidyr::unite(mapping_geneid, "ENTREZID", cols_ENTREZID, sep=";", na.rm=TRUE)
                     mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
-            
-                    prePquant$DDA2009.comparisons$ComparisonResult$ENTREZID <- mapping_geneid$ENTREZID
-                    prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
                     
+                    if(dataControl$data_type == "LFQ"){
+                        prePquant$DDA2009.comparisons$ComparisonResult$ENTREZID <- mapping_geneid$ENTREZID
+                        prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
+                    }else{
+                        prePquant$test.pairwise$ComparisonResult$ENTREZID <- mapping_geneid$ENTREZID
+                        prePquant$test.pairwise$ComparisonResult$GENENAME <- mapping_genename$GENENAME
+                    }
+                  
                 } else {
                     # map geneID to geneName
-                    tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")
+                    if(dataControl$data_type == "LFQ"){
+                        tmp_origin <- lapply(strsplit(as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein), "\\;"), "[")
+                    }else{
+                        tmp_origin <- lapply(strsplit(as.character(prePquant$test.pairwise$ComparisonResult$Protein), "\\;"), "[")
+                    }
                     tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
                     mapping_geneid <- tmp_df
                   
-                    mapping_genename <- data.frame(ProteinName = tmp_df[,1])
-                    for(i in array(1:length(colnames(mapping_geneid)))){
-                        uniKeys <- as.character(mapping_geneid[,i])
+                    mapping_genename <- data.frame(ProteinName = mapping_geneid <- tmp_df[,1])
+                    for(i in array(1:length(colnames(mapping_geneid <- tmp_df)))){
+                        uniKeys <- as.character(mapping_geneid <- tmp_df[,i])
                         tmp_genename <- clusterProfiler::bitr(uniKeys, OrgDb = db_type, fromType = "ENTREZID", toType = "SYMBOL")
                         tmp_genename <- data.frame("GENENAME"=tmp_genename)
                         colnames(tmp_genename)[1] <- 'geneid'
                         
-                        tmp <- data.frame(mapping_geneid[,i])
+                        tmp <- data.frame(mapping_geneid <- tmp_df[,i])
                         colnames(tmp)[1] <- 'geneid'
                         tmp <- dplyr::left_join(tmp, tmp_genename, by = "geneid")
                         mapping_genename <- cbind(mapping_genename, tmp[2])
                     }
                     mapping_genename <- mapping_genename[,-1]
                     cols_GENENAME = "GENENAME.SYMBOL"
-                    for(i in array(1:(length(colnames(mapping_geneid))-1))){
+                    for(i in array(1:(length(colnames(mapping_geneid <- tmp_df))-1))){
                         cols_GENENAME <- cols_GENENAME %>% append(paste("GENENAME.SYMBOL", ".", i, sep = ""))
                     }
                     mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
-                    
-                    prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
+
+                    if(dataControl$data_type == "LFQ"){
+                        prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
+                    }else{
+                        prePquant$test.pairwise$ComparisonResult$GENENAME <- mapping_genename$GENENAME
+                    }
                 }
-                ###
                 
                 dataControl$preprocess_judge <- 1
                 
@@ -909,10 +1038,6 @@ server <- function(input, output, session) {
                         
                         progress <- shiny::Progress$new()
                         on.exit(progress$close())
-                        
-                        DDA2009.proposed <- isolate(prePquant$DDA2009.proposed)
-                        DDA2009.comparisons <- isolate(prePquant$DDA2009.comparisons)
-                        
                       
                         projectpathname <- paste(input$SaveProjectFolderPath, "/", input$SaveProjectDataName, sep = "")
                         dir.create(projectpathname)
@@ -921,8 +1046,17 @@ server <- function(input, output, session) {
                         
                         inputData_rdata_out_msstats <- inputdf()
                         
-                        save(DDA2009.proposed, DDA2009.comparisons, inputData_rdata_out_msstats,
-                             file = paste(projectpathname,"/", "DDA2009.RData", sep = ""))
+                        if(dataControl$data_type == "LFQ"){
+                            DDA2009.proposed <- isolate(prePquant$DDA2009.proposed)
+                            DDA2009.comparisons <- isolate(prePquant$DDA2009.comparisons)
+                            save(DDA2009.proposed, DDA2009.comparisons, inputData_rdata_out_msstats,
+                                 file = paste(projectpathname,"/", "DDA2009.RData", sep = ""))
+                        }else{
+                            quant.msstats <- isolate(prePquant$quant.msstats)
+                            test.pairwise <- isolate(prePquant$test.pairwise)
+                            save(quant.msstats, test.pairwise, inputData_rdata_out_msstats,
+                                 file = paste(projectpathname,"/", "DDA2009.RData", sep = ""))
+                        }
                         
                         progress$set(message = "Save over.", value = 1)
                         
@@ -943,6 +1077,7 @@ server <- function(input, output, session) {
         dataControl$inputData_state <- NULL
         dataControl$inputData_rdata <- NULL
         dataControl$db_type <- NULL
+        dataControl$data_type <- "NULL"
         reset("download_name")
         reset("user_choose_pre_pro2gene")
         
@@ -954,6 +1089,8 @@ server <- function(input, output, session) {
         prePquant$DDA2009.comparisons <- NULL
         prePquant$inputData_rdata_out_msstats <- NULL
         prePquant$inputData_URL_out_msstats <- NULL
+        prePquant$quant.msstats <- NULL
+        prePquant$test.pairwise <- NULL
         
         renderCheck$initialData_qualitycontrolPlot <- 0
         renderCheck$initialData_profilecondition <- 0
@@ -972,41 +1109,73 @@ server <- function(input, output, session) {
         volcanoLive$res <- NULL
         volcanoLive$max_points <- NULL
         volcanoLive$pepdat <- NULL
+        volcanoLive$prolfq_pepdat <- NULL
+        volcanoLive$prolfq_prodat.med <- NULL
+        volcanoLive$protmt_pepd <- NULL
+        volcanoLive$protmt_prod <- NULL
         
         renderCheck$proteus_peptide <- 0
         renderCheck$proteus_protein <- 0
+        renderCheck$proteus_pep_pro <- 0
+        renderCheck$proteus_TMT_peptide <- 0
+        renderCheck$proteus_TMT_protein <- 0
     })
     
     
 
     ##### ---initialData_tabbox_plot---
     initialData_profilecondition_select <- reactive({
-        if(is.null(prePquant$DDA2009.proposed)) {
-            selectInput(inputId = 'initialData_profilecondition_select_input',
-                        label = 'Please upload data first',
-                        choices = NULL)
-        }
-        else {
-            initialData_profilecondition_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
-            selectInput(inputId = 'initialData_profilecondition_select_input',
-                        label = 'Options',
-                        choices = as.list(initialData_profilecondition_selector))
-        }
+        if(dataControl$data_type == "LFQ"){
+            if(is.null(prePquant$DDA2009.proposed)) {
+                selectInput(inputId = 'initialData_profilecondition_select_input',
+                            label = 'Please upload data first',
+                            choices = NULL)
+            }
+            else {
+                initialData_profilecondition_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+                selectInput(inputId = 'initialData_profilecondition_select_input',
+                            label = 'Options',
+                            choices = as.list(initialData_profilecondition_selector))}
+        }else{
+            if(is.null(prePquant$quant.msstats)) {
+                selectInput(inputId = 'initialData_profilecondition_select_input',
+                            label = 'Please upload data first',
+                            choices = NULL)
+            }
+            else {
+                initialData_profilecondition_selector <- levels(prePquant$quant.msstats$ProteinLevelData$Protein)
+                selectInput(inputId = 'initialData_profilecondition_select_input',
+                            label = 'Options',
+                            choices = as.list(initialData_profilecondition_selector))}}
     })
     
     initialData_qualitycontrol_select <- reactive({
-        if(is.null(prePquant$DDA2009.proposed)) {
-            selectInput(inputId = 'initialData_qualitycontrol_select_input',
-                        label = 'Please upload data first',
-                        choices = NULL)
+        if(dataControl$data_type == "LFQ"){
+            if(is.null(prePquant$DDA2009.proposed)) {
+                selectInput(inputId = 'initialData_qualitycontrol_select_input',
+                            label = 'Please upload data first',
+                            choices = NULL)
+            }
+            else {
+                tmp <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+                initialData_qualitycontrol_selector <- append('allonly', tmp, 1)
+                selectInput(inputId = 'initialData_qualitycontrol_select_input',
+                            label = 'Options',
+                            choices = as.list(initialData_qualitycontrol_selector))}
+        }else{
+            if(is.null(prePquant$quant.msstats)) {
+                selectInput(inputId = 'initialData_qualitycontrol_select_input',
+                            label = 'Please upload data first',
+                            choices = NULL)
+            }
+            else {
+                tmp <- levels(prePquant$quant.msstats$ProteinLevelData$Protein)
+                initialData_qualitycontrol_selector <- append('allonly', tmp, 1)
+                selectInput(inputId = 'initialData_qualitycontrol_select_input',
+                            label = 'Options',
+                            choices = as.list(initialData_qualitycontrol_selector))}
         }
-        else {
-            tmp <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
-            initialData_qualitycontrol_selector <- append('allonly', tmp, 1)
-            selectInput(inputId = 'initialData_qualitycontrol_select_input',
-                        label = 'Options',
-                        choices = as.list(initialData_qualitycontrol_selector))
-        }
+        
     })
     
     output$initialData_profilecondition_selector <- renderUI({
@@ -1025,9 +1194,14 @@ server <- function(input, output, session) {
     
     output$initialData_qualitycontrolPlot_out <- renderPlot({
         if(renderCheck$initialData_qualitycontrolPlot > 0) {
-            dataProcessPlots(data = prePquant$DDA2009.proposed, type="QCPlot",
-                             which.Protein=input$initialData_qualitycontrol_select_input,
-                             width=10, height=5, address=FALSE) 
+            if(dataControl$data_type == "LFQ"){
+                dataProcessPlots(data = prePquant$DDA2009.proposed, type="QCPlot",
+                                 which.Protein=input$initialData_qualitycontrol_select_input,
+                                 width=10, height=5, address=FALSE) 
+            }else{
+                dataProcessPlotsTMT(data = prePquant$quant.msstats, type='QCPlot',
+                                    which.Protein=input$initialData_qualitycontrol_select_input,
+                                    width=10, height=5, address=FALSE)}
         } else { return(NULL) }
     })
     
@@ -1038,33 +1212,48 @@ server <- function(input, output, session) {
     
     output$initialData_profilePlot_out <- renderPlot({
         if(renderCheck$initialData_profilecondition > 0){
-            dataProcessPlots(data = prePquant$DDA2009.proposed, type="ProfilePlot",
-                             which.Protein=input$initialData_profilecondition_select_input,
-                             width=10, height=5, address=FALSE)
+            if(dataControl$data_type == "LFQ"){
+                dataProcessPlots(data = prePquant$DDA2009.proposed, type="ProfilePlot",
+                                 which.Protein=input$initialData_profilecondition_select_input,
+                                 width=10, height=5, address=FALSE)
+            }else{
+                dataProcessPlotsTMT(data = prePquant$quant.msstats, type = 'ProfilePlot',
+                                    which.Protein=input$initialData_profilecondition_select_input,
+                                    width=10, height=5, address=FALSE)
+            }
         } else { return(NULL) }
+        
     })
     
     #initialData_conditionPlot_out
     output$initialData_conditionPlot_out <- renderPlot({
         if(renderCheck$initialData_profilecondition > 0){
-            dataProcessPlots(data = prePquant$DDA2009.proposed, type="ConditionPlot",
-                             which.Protein=input$initialData_profilecondition_select_input,
-                             width=10, height=5, address=FALSE)
+            if(dataControl$data_type == "LFQ"){
+              dataProcessPlots(data = prePquant$DDA2009.proposed, type="ConditionPlot",
+                               which.Protein=input$initialData_profilecondition_select_input,
+                               width=10, height=5, address=FALSE)
+            } else { return(NULL) }
         } else { return(NULL) }
+        
     })
     
     
     ### preprocessed data  &  download
     output$preprocessedData <- renderDT({
-      if(is.null(prePquant$DDA2009.comparisons)){
-        return(NULL)
-      }
-      else{
-        tmp <- prePquant$DDA2009.comparisons$ComparisonResult
-        colnames(tmp)[1] <- 'Gene'
-        datatable(tmp,
-                  options = list(scrollX = TRUE))
-      }
+        if(is.null(prePquant$DDA2009.comparisons) & is.null(prePquant$test.pairwise)){ return(NULL) }
+        else{
+            if(dataControl$data_type == "LFQ"){
+                tmp <- prePquant$DDA2009.comparisons$ComparisonResult
+                if(input$user_choose_pre_pro2gene == TRUE){ colnames(tmp)[1] <- 'Gene' }
+                datatable(tmp,
+                          options = list(scrollX = TRUE))
+            }else{
+                tmp <- prePquant$test.pairwise$ComparisonResult
+                if(input$user_choose_pre_pro2gene == TRUE){ colnames(tmp)[1] <- 'Gene' }
+                datatable(tmp,
+                          options = list(scrollX = TRUE))
+            }
+        }
     })
     
     output$download_Render <- downloadHandler(
@@ -1072,8 +1261,12 @@ server <- function(input, output, session) {
             paste(input$download_name, ".csv", sep = "")
         },
         content = function(file) {
-            tmp <- prePquant$DDA2009.comparisons$ComparisonResult
-            colnames(tmp)[1] <- 'Gene'
+            if(dataControl$data_type == "LFQ"){
+                tmp <- prePquant$DDA2009.comparisons$ComparisonResult
+            }else{
+                tmp <- prePquant$test.pairwise$ComparisonResult
+            }
+            if(input$user_choose_pre_pro2gene == TRUE){ colnames(tmp)[1] <- 'Gene' }
             write.csv(tmp, file, row.names = FALSE)
         }
     )
@@ -1084,17 +1277,30 @@ server <- function(input, output, session) {
     
     ### model-based QC plots
     default_method_residual_qq_select <- reactive({
-        if(is.null(prePquant$DDA2009.proposed)) {
-            selectInput(inputId = 'default_method_residual_qq_select_input',
-                        label = 'Please upload data first',
-                        choices = NULL)
+        if(dataControl$data_type == "LFQ"){
+            if(is.null(prePquant$DDA2009.proposed)) {
+                selectInput(inputId = 'default_method_residual_qq_select_input',
+                            label = 'Please upload data first',
+                            choices = NULL)
+            }
+            else {
+                default_method_residual_qq_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+                selectInput(inputId = 'default_method_residual_qq_select_input',
+                            label = 'Options',
+                            choices = as.list(default_method_residual_qq_selector))}
+        }else{
+            if(is.null(prePquant$quant.msstats)) {
+                selectInput(inputId = 'default_method_residual_qq_select_input',
+                            label = 'Please upload data first',
+                            choices = NULL)
+            }
+            else {
+                default_method_residual_qq_selector <- levels(prePquant$quant.msstats$ProteinLevelData$Protein)
+                selectInput(inputId = 'default_method_residual_qq_select_input',
+                            label = 'Options',
+                            choices = as.list(default_method_residual_qq_selector))}
         }
-        else {
-            default_method_residual_qq_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
-            selectInput(inputId = 'default_method_residual_qq_select_input',
-                        label = 'Options',
-                        choices = as.list(default_method_residual_qq_selector))
-        }
+        
     })
  
     output$default_method_residual_qq_selector <- renderUI({
@@ -1109,18 +1315,28 @@ server <- function(input, output, session) {
     
     output$default_method_residualPlot_out <- renderPlot({
         if(renderCheck$default_method_residual_qq > 0){
-            modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="ResidualPlots",
-                              which.Protein=input$default_method_residual_qq_select_input,
-                              width=10, height=5, address=FALSE)
+            if(dataControl$data_type == "LFQ"){
+                modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="ResidualPlots",
+                                  which.Protein=input$default_method_residual_qq_select_input,
+                                  width=10, height=5, address=FALSE)
+            }else{
+                modelBasedQCPlots(data = prePquant$test.pairwise, type="ResidualPlots",
+                                  which.Protein=input$default_method_residual_qq_select_input,
+                                  width=10, height=5, address=FALSE)}
         } else { return(NULL) }
     })
     
     #q-q plot (quantile-quantile)
     output$default_method_qqPlot_out <- renderPlot({
         if(renderCheck$default_method_residual_qq > 0){
-            modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="QQPlots",
-                              which.Protein=input$default_method_residual_qq_select_input,
-                              width=10, height=5, address=FALSE)
+            if(dataControl$data_type == "LFQ"){
+                modelBasedQCPlots(data = prePquant$DDA2009.comparisons, type="QQPlots",
+                                  which.Protein=input$default_method_residual_qq_select_input,
+                                  width=10, height=5, address=FALSE)
+            }else{
+                modelBasedQCPlots(data = prePquant$test.pairwise, type="QQPlots",
+                                  which.Protein=input$default_method_residual_qq_select_input,
+                                  width=10, height=5, address=FALSE)}
         } else { return(NULL) }
     })
     
@@ -1128,14 +1344,18 @@ server <- function(input, output, session) {
     ### group comparison plots
     # default_method volcano plot
     default_method_volcano_select <- reactive({
-        if(is.null(prePquant$DDA2009.proposed)) {
+        if(is.null(prePquant$DDA2009.proposed) & is.null(prePquant$quant.msstats)) {
             selectInput(inputId = 'default_method_volcano_input',
                         label = 'Please upload data first',
                         choices = NULL)
         }
         else {
-            default_method_vol_selector <- getSelector(inputdf(), flag = 'volcano',
-                                                       prePquant$DDA2009.proposed)
+            if(dataControl$data_type == "LFQ"){
+                default_method_vol_selector <- getSelector(inputdf(), flag = 'volcano',
+                                                           prePquant$DDA2009.proposed)
+            }else{
+                default_method_vol_selector <- levels(factor(prePquant$test.pairwise$ComparisonResult$Label))
+            }
             selectInput(inputId = 'default_method_volcano_input',
                         label = 'Options',
                         choices = as.list(default_method_vol_selector))
@@ -1152,9 +1372,14 @@ server <- function(input, output, session) {
     
     output$default_method_volcano_out <- renderPlot({
         if(renderCheck$default_method_volcano > 0){
-            groupComparisonPlots(data = prePquant$DDA2009.comparisons$ComparisonResult, type = 'VolcanoPlot',
-                                 which.Comparison=input$default_method_volcano_input,
-                                 width=5, height=5, address=FALSE)
+            if(dataControl$data_type == "LFQ"){
+                groupComparisonPlots(data = prePquant$DDA2009.comparisons$ComparisonResult, type = 'VolcanoPlot',
+                                     which.Comparison=input$default_method_volcano_input,
+                                     width=5, height=5, address=FALSE)
+            }else{
+                groupComparisonPlots_TMT(data = prePquant$test.pairwise$ComparisonResult, type = 'VolcanoPlot',
+                                         which.Comparison=input$default_method_volcano_input,
+                                         width=5, height=5, address=FALSE)}
         } else { return(NULL) }
     })
     
@@ -1166,30 +1391,48 @@ server <- function(input, output, session) {
     
     output$default_method_heat_out <- renderPlot({
         if(renderCheck$default_method_heatmap > 0){
-            MS_output <- prePquant$DDA2009.comparisons$ComparisonResult
+            if(dataControl$data_type == "LFQ"){
+                MS_output <- prePquant$DDA2009.comparisons$ComparisonResult
+            }else{
+                MS_output <- prePquant$test.pairwise$ComparisonResult
+            }
             MS_output <- MS_output[,1:3]
             MS_output <- MS_output[is.finite(as.numeric(as.character(MS_output$log2FC))),]
             MS_output <- MS_output %>% filter(between(log2FC,-4,4)) %>% spread(key = Label, value = log2FC)
             MS_output <- IDPmisc::NaRV.omit(MS_output)
             
             heatmap <- MS_output[,-1]
-            rownames(heatmap) <- MS_output[,1]
+            if(dataControl$data_type == "LFQ"){
+                rownames(heatmap) <- MS_output$Protein
+            }else{
+                rownames(heatmap) <- levels(unlist(MS_output$Protein))
+            }
             
-            if (nrow(heatmap) > 50) {pheatmap(heatmap, show_rownames = F)}
-            else {pheatmap(heatmap)}
+            if(length(unique(prePquant$test.pairwise$ComparisonResult$Label)) == 1){
+                return(NULL)
+            }else{
+                if(nrow(heatmap) > 50){
+                  pheatmap::pheatmap(heatmap, show_rownames = F)
+                }else{ pheatmap::pheatmap(heatmap) }
+            }
+            
         } else { return(NULL) }
     })
     
     
     # default_method comparison plot
     default_method_comparison_select <- reactive({
-        if(is.null(prePquant$DDA2009.proposed)) {
+        if(is.null(prePquant$DDA2009.proposed) & is.null(prePquant$quant.msstats)) {
             selectInput(inputId = 'default_method_comparison_select_input',
                         label = 'Please upload data first',
                         choices = NULL)
         }
         else {
-            default_method_comparison_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+            if(dataControl$data_type == "LFQ"){
+                default_method_comparison_selector <- levels(prePquant$DDA2009.proposed$ProteinLevelData$Protein)
+            }else{
+                default_method_comparison_selector <- levels(prePquant$quant.msstats$ProteinLevelData$Protein)
+            }
             selectInput(inputId = 'default_method_comparison_select_input',
                         label = 'Options',
                         choices = as.list(default_method_comparison_selector))
@@ -1207,9 +1450,14 @@ server <- function(input, output, session) {
     
     output$default_method_comparisonPlot_out <- renderPlot({
         if(renderCheck$default_method_comparison > 0){
-            groupComparisonPlots(data = prePquant$DDA2009.comparisons$ComparisonResult, type="ComparisonPlot",
-                                 which.Protein=input$default_method_comparison_select_input,
-                                 width=10, height=5, address=FALSE)
+            if(dataControl$data_type == "LFQ"){
+                groupComparisonPlots(data = prePquant$DDA2009.comparisons$ComparisonResult, type="ComparisonPlot",
+                                     which.Protein=input$default_method_comparison_select_input,
+                                     width=10, height=5, address=FALSE)
+            }else{
+                groupComparisonPlots_TMT(data = prePquant$test.pairwise$ComparisonResult, type="ComparisonPlot",
+                                         which.Protein=input$default_method_comparison_select_input,
+                                         width=10, height=5, address=FALSE)}
         } else { return(NULL) }
     })
     
@@ -1235,6 +1483,8 @@ server <- function(input, output, session) {
         volcanoLive$res <- NULL
         volcanoLive$max_points <- NULL
         volcanoLive$pepdat <- NULL
+        volcanoLive$protmt_pepd <- NULL
+        volcanoLive$protmt_prod <- NULL
     })
     
     ### start_convert_to_proteus
@@ -1258,23 +1508,30 @@ server <- function(input, output, session) {
     ### annotate metadata for user
     categorial_anno <- reactive({
         fileData <- inputdf()
-        dynamic_data <- unique(fileData[,grepl("Reference|Condition", colnames(fileData))])
-        dynamic_data <- dynamic_data[order(dynamic_data$Condition),]
-        
-        dynamic_condition <- sort(dynamic_data[,grepl("Condition", colnames(dynamic_data))])
-        metadata <- data.frame(condition = dynamic_condition)
-        
-        dynamic_sample <- lapply(strsplit(dynamic_data$Reference, "\\.mzML"), "[")
-        dynamic_sample <- as.data.frame(sapply(dynamic_sample, "[", i = 1:max(sapply(dynamic_sample, length))))
-        colnames(dynamic_sample)[1] <- 'sample'
-        metadata <- cbind(metadata, dynamic_sample)
+        if(dataControl$data_type == "LFQ"){
+            dynamic_data <- unique(fileData[,grepl("Reference|Condition", colnames(fileData))])
+            dynamic_data <- dynamic_data[order(dynamic_data$Condition),]
+            colnames(dynamic_data)[1] <- 'condition'
+            colnames(dynamic_data)[2] <- 'sample'
+            metadata <- dynamic_data
+            rownames(metadata) <- c(1:nrow(metadata))
+        }else{
+            meta_tmp <- unique(fileData[,grepl("Channel|Condition|TechRepMixture|Run", colnames(fileData))])
+            meta_tmp <- tidyr::unite(meta_tmp, "sample", Run, Channel, TechRepMixture, sep="-", remove=FALSE)
+            meta <- as.data.frame(matrix(nrow=length(rownames(meta_tmp)),ncol=2))
+            meta_colnames <- c("condition", "sample")
+            names(meta) <- meta_colnames
+            meta$sample <- meta_tmp$sample
+            meta$condition <- meta_tmp$Condition
+            metadata <- meta
+        }
         return(metadata)
     })
     
     
     output$dynamic_define_metadata <- renderRHandsontable({
         if (is.null(input$inputData)) { return(NULL) }
-        else if ((dataControl$annoStart > 0) & (input$inputData != 0)) {
+        else if (dataControl$annoStart > 0 & dataControl$inputData_state == "uploaded") {
             categorial_anno <- categorial_anno()
             categorial_anno$sample <- as.character(categorial_anno$sample)
             categorial_anno$condition <- as.character(categorial_anno$condition)
@@ -1328,125 +1585,175 @@ server <- function(input, output, session) {
           
           progress$set(message = "Begin to preprocess data, please wait...", value = 0.1)
           fileData <- inputdf()
-          meta <- dynamic_metadata()
           
-          sequence.col <- "sequence"
-          protein.col <- "protein"
-          experiment.type <- "label-free"
-          ncores = 4
-          # mclapply doesn't work on Windows, so force 1 core
-          if(Sys.info()[['sysname']] == "Windows") {
-              ncores <- 1
-              warning("Multicore processing not available in Windows. Using ncores=1")
-          }
-          
-          progress$set(message = "Begin to preprocess data, please wait...", value = 0.3)
-          measureColumns <- list(
-              Intensity = 'Intensity'
-          )
-          measures <- names(measureColumns)
-          
-          tabMelt <- fileData[c("PeptideSequence","Intensity","Reference")]
-          names(tabMelt)[1] <- "sequence"
-          names(tabMelt)[2] <- "value"
-          names(tabMelt)[3] <- "sample"
-          
-          # create unique sequence names
-          tabMelt$seqsam <- paste0(tabMelt$sequence, ".", tabMelt$sample)
-          tabMelt <- tabMelt[order(tabMelt$seqsam),]
-          s2s <- setNames(tabMelt$sequence, tabMelt$seqsam)
-          r <- rle(tabMelt$seqsam)
-          tabMelt$uniseq <- paste0(rep(s2s[r$values], times=r$lengths), ".", unlist(lapply(r$lengths, seq_len)))
-          
-          # cast into table: sample vs unique sequence
-          # in this table there are multiple entries per peptide
-          tab <- reshape2::dcast(tabMelt, uniseq ~ sample, sum, value.var="value")
-          
-          # original sequence
-          u2s <- setNames(tabMelt$sequence, tabMelt$uniseq)
-          sequences <- u2s[tab$uniseq]
-          
-          # extract numeric data as matrix
-          tab <- as.matrix(tab[,2:ncol(tab)])
-          tab[tab == 0] <- NA
-          
-          progress$set(message = "Begin to preprocess data, please wait...", value = 0.5)
-          aggregateSum <- function(wp) {
-              row <- colSums(wp, na.rm=TRUE)
-              row[row==0] <- NA    # colSums puts zeroes where the column contains only NAs (!!!)
-              return(as.vector(row))
-          }
-          aggregate.fun=aggregateSum
-          # aggregate peptides
-          ptab <- parallel::mclapply(unique(sequences), function(s) {
-              wp <- tab[sequences == s,, drop=FALSE]
-              x <- aggregate.fun(wp)
-              row <- as.data.frame(t(as.vector(x)))
-              rownames(row) <- s
-              return(row)
-          }, mc.cores=ncores)
-          ptab <- as.matrix(do.call(rbind, ptab))
-          colnames(ptab) <- colnames(tab)
-          peptides <- row.names(ptab)
-          
-          # peptide to protein conversion
-          pep2prot <- data.frame(sequence=fileData$PeptideSequence, protein=fileData$ProteinName)
-          pep2prot <- unique(pep2prot)
-          if(anyDuplicated(pep2prot$sequence) > 0) stop("Non-unique peptide-to-protein association found. Proteus requires that peptide sequence is uniquely associated with a protein or protein group.")
-          rownames(pep2prot) <- pep2prot$sequence
-          pep2prot <- pep2prot[peptides,]
-          proteins <- levels(as.factor(pep2prot$protein))
-          
-          volcanoLive$pepdat <- ptab
-          
-          progress$set(message = "Begin to preprocess data, please wait...", value = 0.7)
-          ### makeProteinTable
-          tab <- ptab
-          
-          protlist <- list()
-          for(cond in levels(factor(as.character(meta$condition)))) {
-              w <- tab[,which(meta$condition == cond), drop=FALSE]
-              samples <- colnames(w)
-              protcond <- parallel::mclapply(proteins, function(prot) {
-                  sel <- which(pep2prot$protein == prot)
-                  npep <- length(sel)
-                  min.peptides=2
-                  if(npep >= min.peptides) {
-                      wp <- w[sel,, drop=FALSE]
-                      x <- aggregate.fun(wp)
-                      row <- as.data.frame(t(as.vector(x)))
-                  } else {
-                      row <- as.data.frame(t(rep(NA, length(samples))))
-                  }
-                  names(row) <- samples
-                  row <- data.frame(protein=prot, row, check.names=FALSE)
+          if(dataControl$data_type == "LFQ"){
+              meta <- dynamic_metadata()
+              
+              sequence.col <- "sequence"
+              protein.col <- "protein"
+              experiment.type <- "label-free"
+              ncores = 4
+              # mclapply doesn't work on Windows, so force 1 core
+              if(Sys.info()[['sysname']] == "Windows") {
+                  ncores <- 1
+                  warning("Multicore processing not available in Windows. Using ncores=1")
+              }
+              
+              progress$set(message = "Begin to preprocess data, please wait...", value = 0.3)
+              measureColumns <- list(
+                  Intensity = 'Intensity'
+              )
+              measures <- names(measureColumns)
+              
+              tabMelt <- fileData[c("PeptideSequence","Intensity","Reference")]
+              names(tabMelt)[1] <- "sequence"
+              names(tabMelt)[2] <- "value"
+              names(tabMelt)[3] <- "sample"
+              
+              # create unique sequence names
+              tabMelt$seqsam <- paste0(tabMelt$sequence, ".", tabMelt$sample)
+              tabMelt <- tabMelt[order(tabMelt$seqsam),]
+              s2s <- setNames(tabMelt$sequence, tabMelt$seqsam)
+              r <- rle(tabMelt$seqsam)
+              tabMelt$uniseq <- paste0(rep(s2s[r$values], times=r$lengths), ".", unlist(lapply(r$lengths, seq_len)))
+              
+              # cast into table: sample vs unique sequence
+              # in this table there are multiple entries per peptide
+              tab <- reshape2::dcast(tabMelt, uniseq ~ sample, sum, value.var="value")
+              
+              # original sequence
+              u2s <- setNames(tabMelt$sequence, tabMelt$uniseq)
+              sequences <- u2s[tab$uniseq]
+              
+              # extract numeric data as matrix
+              tab <- as.matrix(tab[,2:ncol(tab)])
+              tab[tab == 0] <- NA
+              
+              progress$set(message = "Begin to preprocess data, please wait...", value = 0.5)
+              aggregateSum <- function(wp) {
+                  row <- colSums(wp, na.rm=TRUE)
+                  row[row==0] <- NA    # colSums puts zeroes where the column contains only NAs (!!!)
+                  return(as.vector(row))
+              }
+              aggregate.fun=aggregateSum
+              # aggregate peptides
+              ptab <- parallel::mclapply(unique(sequences), function(s) {
+                  wp <- tab[sequences == s,, drop=FALSE]
+                  x <- aggregate.fun(wp)
+                  row <- as.data.frame(t(as.vector(x)))
+                  rownames(row) <- s
                   return(row)
               }, mc.cores=ncores)
-              protint <- do.call(rbind, protcond)
-              protlist[[cond]] <- protint
+              ptab <- as.matrix(do.call(rbind, ptab))
+              colnames(ptab) <- colnames(tab)
+              peptides <- row.names(ptab)
+              
+              # peptide to protein conversion
+              pep2prot <- data.frame(sequence=fileData$PeptideSequence, protein=fileData$ProteinName)
+              pep2prot <- unique(pep2prot)
+              if(anyDuplicated(pep2prot$sequence) > 0) stop("Non-unique peptide-to-protein association found. Proteus requires that peptide sequence is uniquely associated with a protein or protein group.")
+              rownames(pep2prot) <- pep2prot$sequence
+              pep2prot <- pep2prot[peptides,]
+              proteins <- levels(as.factor(pep2prot$protein))
+              
+              volcanoLive$pepdat <- ptab
+              
+              progress$set(message = "Begin to preprocess data, please wait...", value = 0.7)
+              ### makeProteinTable
+              tab <- ptab
+              
+              protlist <- list()
+              for(cond in levels(factor(as.character(meta$condition)))) {
+                  w <- tab[,which(meta$condition == cond), drop=FALSE]
+                  samples <- colnames(w)
+                  protcond <- parallel::mclapply(proteins, function(prot) {
+                      sel <- which(pep2prot$protein == prot)
+                      npep <- length(sel)
+                      min.peptides=2
+                      if(npep >= min.peptides) {
+                          wp <- w[sel,, drop=FALSE]
+                          x <- aggregate.fun(wp)
+                          row <- as.data.frame(t(as.vector(x)))
+                      } else {
+                          row <- as.data.frame(t(rep(NA, length(samples))))
+                      }
+                      names(row) <- samples
+                      row <- data.frame(protein=prot, row, check.names=FALSE)
+                      return(row)
+                  }, mc.cores=ncores)
+                  protint <- do.call(rbind, protcond)
+                  protlist[[cond]] <- protint
+              }
+            
+              # dplyr join all tables
+              protab <- Reduce(function(df1, df2) dplyr::full_join(df1,df2, by="protein"), protlist)
+              
+              # remove empty rows (happens when min.peptides > 1)
+              protab <- protab[which(rowSums(!is.na(protab)) > 0), ]
+              proteins <- protab$protein
+              #protab <- as.matrix(protab[,as.character(unique(tabMelt$sample))])
+              rownames(protab) <- protab[,1]
+              protab <- protab[,-1]
+              
+              
+              progress$set(message = "Begin to preprocess data, please wait...", value = 0.9)
+              normalizeMedian <- function(tab) {
+                  norm.fac <- apply(tab, 2, function(x) {median(x, na.rm=TRUE)})
+                  norm.fac <- norm.fac / mean(norm.fac, na.rm=TRUE)
+                  tab <- t(t(tab) / norm.fac)
+                  return(tab)
+              }
+              protab <- normalizeMedian(protab)
+              
+              volcanoLive$pdat <- protab
+          
+          }else{
+            
+              df <- as.data.frame(matrix(nrow=length(rownames(fileData)),ncol=9))
+              proteus_colnames <- c("sequence", "modified_sequence", "protein_group", "proteins", "protein",
+                                    "experiment", "charge", "reverse", "contaminant")
+              names(df) <- proteus_colnames
+              
+              df$sequence <- fileData$PeptideSequence
+              df$proteins <- fileData$ProteinName
+              df_protein <- lapply(strsplit(fileData$ProteinName, "\\;"), "[", 1)
+              df$protein <- sapply(df_protein, "[", i = 1:max(sapply(df_protein, length)))
+              df$charge <- fileData$Charge
+              df$experiment <- fileData$Run
+              
+              df$remove1 <- fileData$Reference
+              df$remove2 <- fileData$RetentionTime
+              
+              df$Intensity <- fileData$Intensity
+              df$Channel <- fileData$Channel
+              df <- df %>% spread(key = Channel, value = Intensity, fill = NA)
+              df <- subset(df, select = -c(remove1, remove2))
+              
+              meta_tmp <- unique(fileData[,grepl("Channel|Condition|TechRepMixture|Run", colnames(fileData))])
+              meta_tmp <- tidyr::unite(meta_tmp, "sample", Run, Channel, TechRepMixture, sep="-", remove=FALSE)
+              
+              meta <- as.data.frame(matrix(nrow=length(rownames(meta_tmp)),ncol=5))
+              meta_colnames <- c("experiment", "measure", "sample", "condition", "replicate")
+              names(meta) <- meta_colnames
+              
+              meta$experiment <- meta_tmp$Run
+              meta$measure <- meta_tmp$Channel
+              meta$sample <- meta_tmp$sample
+              meta$condition <- meta_tmp$Condition
+              meta$replicate <- meta_tmp$TechRepMixture
+              
+              measCols <- unique(meta$measure)
+              names(measCols) <- unique(meta$measure)
+              pepdat <- proteus::makePeptideTable(df, meta, measure.cols=measCols, aggregate.fun=aggregateMedian, experiment.type="TMT")
+              prodat <- proteus::makeProteinTable(pepdat, aggregate.fun=aggregateHifly, hifly=3)
+              prodat.norm <- proteus::normalizeTMT(prodat)
+              
+              volcanoLive$pdat <- prodat.norm$tab
+              
+              volcanoLive$protmt_pepd <- pepdat
+              volcanoLive$protmt_prod <- prodat.norm
           }
-        
-          # dplyr join all tables
-          protab <- Reduce(function(df1, df2) dplyr::full_join(df1,df2, by="protein"), protlist)
           
-          # remove empty rows (happens when min.peptides > 1)
-          protab <- protab[which(rowSums(!is.na(protab)) > 0), ]
-          proteins <- protab$protein
-          #protab <- as.matrix(protab[,as.character(unique(tabMelt$sample))])
-          rownames(protab) <- protab[,1]
-          protab <- protab[,-1]
-          
-          
-          progress$set(message = "Begin to preprocess data, please wait...", value = 0.9)
-          normalizeMedian <- function(tab) {
-              norm.fac <- apply(tab, 2, function(x) {median(x, na.rm=TRUE)})
-              norm.fac <- norm.fac / mean(norm.fac, na.rm=TRUE)
-              tab <- t(t(tab) / norm.fac)
-              return(tab)
-          }
-          protab <- normalizeMedian(protab)
-          
-          volcanoLive$pdat <- protab
           
           volcanoLive$max_points = 100
           
@@ -1470,8 +1777,12 @@ server <- function(input, output, session) {
                         choices = NULL)
         }
         else {
-            dynamic_vol_selector <- getSelector(inputdf(), flag = 'volcano',
-                                                       prePquant$DDA2009.proposed)
+            if(dataControl$data_type == "LFQ"){
+                dynamic_vol_selector <- getSelector(inputdf(), flag = 'volcano',
+                                                    prePquant$DDA2009.proposed)
+            }else{
+                dynamic_vol_selector <- levels(factor(prePquant$test.pairwise$ComparisonResult$Label))
+            }
             selectInput(inputId = 'dynamic_volcano_input',
                         label = 'Options',
                         choices = as.list(dynamic_vol_selector))
@@ -1492,7 +1803,11 @@ server <- function(input, output, session) {
         progress$set(message = "Begin to preprocess data, please wait...", value = 0.6)
         
         selector = input$dynamic_volcano_input
-        comparisons <- subset(prePquant$DDA2009.comparisons$ComparisonResult, Label==selector)
+        if(dataControl$data_type == "LFQ"){
+            comparisons <- subset(prePquant$DDA2009.comparisons$ComparisonResult, Label==selector)
+        }else{
+            comparisons <- subset(prePquant$test.pairwise$ComparisonResult, Label==selector)
+        }
         volcanoLive$res <- comparisons
         
         volcanoLive$res$"-log10(pvalue)" <- -log10(volcanoLive$res$pvalue)
@@ -1516,27 +1831,32 @@ server <- function(input, output, session) {
         
         ## Volcano plot
         output$dynamic_plotVolcano_out <- renderPlot({
-          if (renderCheck$dynamic_volcano > 0) {
-            tab_idx <- as.numeric(input$allProteinTable_rows_selected)
-            pVol <- dynamic_plotVolcano(volcanoLive$res, binhex=FALSE)
-            if(length(tab_idx) > 0) {
-              pVol <- pVol + geom_point(data=volcanoLive$res[tab_idx,], size=3, color='red')
-            }
-            return(pVol)
-          } else { return(NULL) }
+            if (renderCheck$dynamic_volcano > 0) {
+                tab_idx <- as.numeric(input$allProteinTable_rows_selected)
+                pVol <- dynamic_plotVolcano(volcanoLive$res, binhex=FALSE)
+                if(length(tab_idx) > 0) {
+                    pVol <- pVol + geom_point(data=volcanoLive$res[tab_idx,], size=3, color='red')
+                }
+                return(pVol)
+            } else { return(NULL) }
         })
         
         
         output$dynamic_allProteinTable_out <- DT::renderDataTable({
-          if (renderCheck$dynamic_volcano > 0) {
-            # assume first column is id ("protein" or "peptide")
-            idcol <- names(volcanoLive$res)[1]
-            cols <- c(idcol, "log2FC", "pvalue", "adj.pvalue")
-            d <- volcanoLive$res[, cols]
-            d[, 2:ncol(d)] <- sapply(d[, 2:ncol(d)], function(x) signif(x, 3))
-            d <- DT::datatable(d, class = 'cell-border strip hover')
-            DT::formatStyle(d, 0, cursor = 'pointer')
-          } else { return(NULL) }
+            if (renderCheck$dynamic_volcano > 0) {
+                # assume first column is id ("protein" or "peptide")
+                idcol <- names(volcanoLive$res)[1]
+                cols <- c(idcol, "log2FC", "pvalue", "adj.pvalue")
+                if(dataControl$data_type == "LFQ"){
+                    d <- volcanoLive$res[, cols]
+                    d[, 2:ncol(d)] <- sapply(d[, 2:ncol(d)], function(x) signif(x, 3))
+                }
+                else{
+                    d <- subset(volcanoLive$res, select = cols) 
+                }
+                d <- DT::datatable(d, class = 'cell-border strip hover')
+                DT::formatStyle(d, 0, cursor = 'pointer')
+            } else { return(NULL) }
         })
         
     })
@@ -1546,113 +1866,131 @@ server <- function(input, output, session) {
     ### dynamic FID Plot
     
     dynamic_FID_select <- reactive({
-      if(is.null(input$inputData)) {
-        selectInput(inputId = 'dynamic_FID_input',
-                    label = 'Please upload .csv data first',
-                    choices = NULL)
-      }
-      else if(dataControl$annoSubmit == 0){
-        selectInput(inputId = 'dynamic_FID_input',
-                    label = 'Please submit annotation first',
-                    choices = NULL)
-      }
-      else {
-        dynamic_fid_selector <- getSelector(inputdf(), flag = 'volcano',
-                                            prePquant$DDA2009.proposed)
-        selectInput(inputId = 'dynamic_FID_input',
-                    label = 'Options',
-                    choices = as.list(dynamic_fid_selector))
-      }
+        if(is.null(input$inputData)) {
+            selectInput(inputId = 'dynamic_FID_input',
+                        label = 'Please upload .csv data first',
+                        choices = NULL)
+        }
+        else if(dataControl$annoSubmit == 0){
+            selectInput(inputId = 'dynamic_FID_input',
+                        label = 'Please submit annotation first',
+                        choices = NULL)
+        }
+        else {
+            if(dataControl$data_type == "LFQ"){
+                dynamic_fid_selector <- getSelector(inputdf(), flag = 'volcano',
+                                                    prePquant$DDA2009.proposed)
+            }else{
+                dynamic_fid_selector <- levels(factor(prePquant$test.pairwise$ComparisonResult$Label))
+            }
+            selectInput(inputId = 'dynamic_FID_input',
+                        label = 'Options',
+                        choices = as.list(dynamic_fid_selector))
+        }
     })
     
     output$dynamic_FID_selector <- renderUI({
-      dynamic_FID_select()
+        dynamic_FID_select()
     })
     
     
     observeEvent(input$dynamic_FID_Render, {
-      renderCheck$dynamic_FID <- 1
-      
-      progress <- shiny::Progress$new()
-      on.exit(progress$close())
-      
-      progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
-      
-      selector = input$dynamic_FID_input
-      comparisons <- subset(prePquant$DDA2009.comparisons$ComparisonResult, Label==selector)
-      volcanoLive$res_FID <- comparisons
-      
-      volcanoLive$res_FID$"-log10(pvalue)" <- -log10(volcanoLive$res_FID$pvalue)
-      
-      rownames(volcanoLive$res_FID) <- c(1:nrow(volcanoLive$res_FID))
-      
-      progress$set(message = "Begin to preprocess data, please wait...", value = 0.5)
-      
-      tmp <- dynamic_metadata()
-      condition <- unique(tmp$condition)
-      FID_pair <- strsplit(selector, "-")[[1]]
-      
-      # Generate the fold-change/intensity dataset. The same as in the FID plot.
-      condMeans <- function(cond) {
-          m <- rowMeans(log10(volcanoLive$pdat)[,which(condition == cond), drop=FALSE], na.rm=TRUE)
-          m[is.nan(m)] <- NA
-          m
-      }
-      m1 <- condMeans(FID_pair[1])
-      m2 <- condMeans(FID_pair[2])
-      good <- !is.na(m1) & !is.na(m2)
-      fi <- data.frame(
-          id = rownames(volcanoLive$pdat),
-          x = (m1 + m2) / 2,
-          y = m2 - m1,
-          good = good
-      )
-      rownames(fi) <- 1:nrow(fi)
-      
-      mx <- 1.1 * max(abs(fi$y), na.rm=TRUE)
-      m <- rbind(m1[!good], m2[!good])
-      fi[!good, "x"] <- colSums(m, na.rm=TRUE)
-      fi[!good, "y"] <- ifelse(is.na(m[1,]), mx, -mx)
-      
-      progress$set(message = "Preprocessing is over.", value = 1)
-      
-      if(input$user_choose_pre_pro2gene == FALSE){
-        dynamic_signif_flag = "n"
-      } else {
-        dynamic_signif_flag = "y"
-      }
-      
-      output$dynamic_FID_gap_out <- renderUI({HTML('<br/>')})
-      
-      output$dynamic_FID_replicateTable_out <- dynamic_fid_replicateTable(fi, input, volcanoLive$pdat, volcanoLive$max_points)
-      output$dynamic_FID_significanceTable_out <- dynamic_fid_significanceTable(fi, volcanoLive$res_FID, input, dynamic_signif_flag)
-      output$dynamic_FID_jitterPlot_out <- dynamic_fid_jitterPlot(fi, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
-      
-      
-      ## FID plot
-      output$dynamic_plotFID_out <- renderPlot({
-          if (renderCheck$dynamic_FID > 0) {
-              tab_idx <- as.numeric(input$allProteinTable_rows_selected)
-              pFID <- dynamic_fid_plotFID(volcanoLive$pdat, condition, FID_pair, binhex=FALSE)
-              if(length(tab_idx) > 0) {
-                  pFID <- pFID + geom_point(data=fi[tab_idx,], size=3, color='red')
-              }
-              return(pFID)
-          } else { return(NULL) }
-      })
-      
-      
-      output$dynamic_FID_allProteinTable_out <- DT::renderDataTable({
-          if (renderCheck$dynamic_FID > 0) {
-              # assume first column is id ("protein" or "peptide")
-              idcol <- names(volcanoLive$res_FID)[1]
-              cols <- c(idcol, "log2FC", "pvalue", "adj.pvalue")
-              d <- volcanoLive$res_FID[, cols]
-              d[, 2:ncol(d)] <- sapply(d[, 2:ncol(d)], function(x) signif(x, 3))
-              d <- DT::datatable(d, class = 'cell-border strip hover')
-              DT::formatStyle(d, 0, cursor = 'pointer')
-          } else { return(NULL) }
-      })
+        renderCheck$dynamic_FID <- 1
+        
+        progress <- shiny::Progress$new()
+        on.exit(progress$close())
+        
+        progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
+        
+        selector = input$dynamic_FID_input
+        if(dataControl$data_type == "LFQ"){
+            comparisons <- subset(prePquant$DDA2009.comparisons$ComparisonResult, Label==selector)
+        }else{
+            comparisons <- subset(prePquant$test.pairwise$ComparisonResult, Label==selector)
+        }
+        volcanoLive$res_FID <- comparisons
+        
+        volcanoLive$res_FID$"-log10(pvalue)" <- -log10(volcanoLive$res_FID$pvalue)
+        
+        rownames(volcanoLive$res_FID) <- c(1:nrow(volcanoLive$res_FID))
+        
+        progress$set(message = "Begin to preprocess data, please wait...", value = 0.5)
+        
+        tmp <- dynamic_metadata()
+        condition <- unique(tmp$condition)
+        if(dataControl$data_type == "LFQ"){
+            FID_pair <- strsplit(selector, "-")[[1]]
+        }else{
+            FID_pair <- strsplit(selector, "vs")[[1]]
+        }
+        
+        
+        # Generate the fold-change/intensity dataset. The same as in the FID plot.
+        condMeans <- function(cond) {
+            m <- rowMeans(log10(volcanoLive$pdat)[,which(condition == cond), drop=FALSE], na.rm=TRUE)
+            m[is.nan(m)] <- NA
+            m
+        }
+        m1 <- condMeans(FID_pair[1])
+        m2 <- condMeans(FID_pair[2])
+        good <- !is.na(m1) & !is.na(m2)
+        fi <- data.frame(
+            id = rownames(volcanoLive$pdat),
+            x = (m1 + m2) / 2,
+            y = m2 - m1,
+            good = good
+        )
+        rownames(fi) <- 1:nrow(fi)
+        
+        mx <- 1.1 * max(abs(fi$y), na.rm=TRUE)
+        m <- rbind(m1[!good], m2[!good])
+        fi[!good, "x"] <- colSums(m, na.rm=TRUE)
+        fi[!good, "y"] <- ifelse(is.na(m[1,]), mx, -mx)
+        
+        progress$set(message = "Preprocessing is over.", value = 1)
+        
+        if(input$user_choose_pre_pro2gene == FALSE){
+          dynamic_signif_flag = "n"
+        } else {
+          dynamic_signif_flag = "y"
+        }
+        
+        output$dynamic_FID_gap_out <- renderUI({HTML('<br/>')})
+        
+        output$dynamic_FID_replicateTable_out <- dynamic_fid_replicateTable(fi, input, volcanoLive$pdat, volcanoLive$max_points)
+        output$dynamic_FID_significanceTable_out <- dynamic_fid_significanceTable(fi, volcanoLive$res_FID, input, dynamic_signif_flag)
+        output$dynamic_FID_jitterPlot_out <- dynamic_fid_jitterPlot(fi, input, volcanoLive$pdat, volcanoLive$max_points, dynamic_metadata())
+        
+        
+        ## FID plot
+        output$dynamic_plotFID_out <- renderPlot({
+            if (renderCheck$dynamic_FID > 0) {
+                tab_idx <- as.numeric(input$allProteinTable_rows_selected)
+                pFID <- dynamic_fid_plotFID(volcanoLive$pdat, condition, FID_pair, binhex=FALSE)
+                if(length(tab_idx) > 0) {
+                    pFID <- pFID + geom_point(data=fi[tab_idx,], size=3, color='red')
+                }
+                return(pFID)
+            } else { return(NULL) }
+        })
+        
+        
+        output$dynamic_FID_allProteinTable_out <- DT::renderDataTable({
+            if (renderCheck$dynamic_FID > 0) {
+                # assume first column is id ("protein" or "peptide")
+                idcol <- names(volcanoLive$res_FID)[1]
+                cols <- c(idcol, "log2FC", "pvalue", "adj.pvalue")
+                if(dataControl$data_type == "LFQ"){
+                    d <- volcanoLive$res_FID[, cols]
+                    d[, 2:ncol(d)] <- sapply(d[, 2:ncol(d)], function(x) signif(x, 3))
+                }
+                else{
+                    d <- subset(volcanoLive$res_FID, select = cols) 
+                }
+                d <- DT::datatable(d, class = 'cell-border strip hover')
+                DT::formatStyle(d, 0, cursor = 'pointer')
+            } else { return(NULL) }
+        })
       
     })
     
@@ -1663,135 +2001,191 @@ server <- function(input, output, session) {
     ## annotation check control
     
     observe({
-        shinyjs::toggleState("proteus_peptide_Render", input$submit_anno == TRUE)
-        shinyjs::toggleState("proteus_protein_Render", input$submit_anno == TRUE)
+        shinyjs::toggleState("proteus_peptide_Render", dataControl$annoSubmit > 0 & dataControl$data_type == "LFQ")
+        shinyjs::toggleState("proteus_protein_Render", dataControl$annoSubmit > 0 & dataControl$data_type == "LFQ")
+        shinyjs::toggleState("proteus_TMT_peptide_Render", dataControl$annoSubmit > 0 & dataControl$data_type == "TMT")
+        shinyjs::toggleState("proteus_TMT_protein_Render", dataControl$annoSubmit > 0 & dataControl$data_type == "TMT")
+        #shinyjs::toggleState("proteus_TMT_protein_Render", input$submit_anno == TRUE)
     })
     
     ## proteus: peptide data
     
-    observeEvent(input$proteus_peptide_Render, {
-        renderCheck$proteus_peptide <- 1
+    observe({
+        if(renderCheck$proteus_peptide > 0 | renderCheck$proteus_protein > 0){
+            if(renderCheck$proteus_pep_pro == 0 & dataControl$data_type == "LFQ"){
+                progress <- shiny::Progress$new()
+                on.exit(progress$close())
+                
+                progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
+                
+                fileData <- inputdf()
+                proteus_colnames <- c("PeptideSequence", "modified_sequence", "modifications", "protein_group", "protein",
+                                      "experiment", "charge", "intensity", "sequence", "accession")
+                
+                df <- as.data.frame(matrix(nrow=length(rownames(fileData)),ncol=10))
+                names(df) <- proteus_colnames
+                
+                df$protein_group <- fileData$ProteinName
+                df$charge <- fileData$PrecursorCharge
+                df$intensity <- fileData$Intensity
+                
+                df$experiment <- fileData$Reference
+                
+                df_protein <- lapply(strsplit(fileData$ProteinName, "\\;"), "[", 1)
+                df_protein <- sapply(df_protein, "[", i = 1:max(sapply(df_protein, length)))
+                df$protein <- df_protein
         
-        progress <- shiny::Progress$new()
-        on.exit(progress$close())
+                df$sequence <- fileData$PeptideSequence
+                
+                progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
+                
+                
+                dynamic_data <- unique(fileData[,grepl("Reference|Condition", colnames(fileData))])
+                dynamic_data <- dynamic_data[order(dynamic_data$Condition),]
+                colnames(dynamic_data)[1] <- 'condition'
+                colnames(dynamic_data)[2] <- 'sample'
+                metadata <- dynamic_data
+                rownames(metadata) <- c(1:nrow(metadata))
+                
+                measure <- rep("Intensity", length(rownames(metadata)))
+                metadata <- cbind(measure, metadata)
+                
+                experiment <- metadata$sample
+                metadata <- cbind(experiment, metadata)
+                
+                progress$set(message = "Begin to preprocess data, please wait...", value = 0.6)
+                volcanoLive$prolfq_pepdat <- proteus::makePeptideTable(df, metadata)
+                progress$set(message = "Begin to preprocess data, please wait...", value = 0.8)
+                prodat <- proteus::makeProteinTable(volcanoLive$prolfq_pepdat)
+                progress$set(message = "Begin to preprocess data, please wait...", value = 0.9)
+                volcanoLive$prolfq_prodat.med <- proteus::normalizeData(prodat)
+                
+                progress$set(message = "Preprocessing is over.", value = 1)
+                
+                renderCheck$proteus_pep_pro <- 1
+            }
+        }
         
-        progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
         
-        fileData <- inputdf()
-        proteus_colnames <- c("PeptideSequence", "modified_sequence", "modifications", "protein_group", "protein",
-                              "experiment", "charge", "intensity", "sequence", "accession")
-        
-        df <- as.data.frame(matrix(nrow=length(rownames(fileData)),ncol=10))
-        names(df) <- proteus_colnames
-        
-        df$protein_group <- fileData$ProteinName
-        df$charge <- fileData$PrecursorCharge
-        df$intensity <- fileData$Intensity
-        
-        df_experiment <- lapply(strsplit(fileData$Reference, "\\.mzML"), "[")
-        df_experiment <- sapply(df_experiment, "[", i = 1:max(sapply(df_experiment, length)))
-        df$experiment <- df_experiment
-        
-        df_protein <- lapply(strsplit(fileData$ProteinName, "\\;"), "[", 1)
-        df_protein <- sapply(df_protein, "[", i = 1:max(sapply(df_protein, length)))
-        df$protein <- df_protein
-
-        df$sequence <- fileData$PeptideSequence
-        
-        progress$set(message = "Begin to preprocess data, please wait...", value = 0.4)
-        
-        dynamic_data <- unique(fileData[,grepl("Reference|Condition", colnames(fileData))])
-        dynamic_data <- dynamic_data[order(dynamic_data$Condition),]
-        
-        dynamic_condition <- sort(dynamic_data[,grepl("Condition", colnames(dynamic_data))])
-        metadata <- data.frame(condition = dynamic_condition)
-        
-        dynamic_sample <- lapply(strsplit(dynamic_data$Reference, "\\.mzML"), "[")
-        dynamic_sample <- as.data.frame(sapply(dynamic_sample, "[", i = 1:max(sapply(dynamic_sample, length))))
-        colnames(dynamic_sample)[1] <- 'sample'
-        metadata <- cbind(metadata, dynamic_sample)
-        
-        measure <- rep("Intensity", length(rownames(metadata)))
-        metadata <- cbind(measure, metadata)
-        
-        experiment <- metadata$sample
-        metadata <- cbind(experiment, metadata)
-        
-        progress$set(message = "Begin to preprocess data, please wait...", value = 0.6)
-        pepdat <- proteus::makePeptideTable(df, metadata)
-        progress$set(message = "Begin to preprocess data, please wait...", value = 0.8)
-        prodat <- proteus::makeProteinTable(pepdat)
-        progress$set(message = "Begin to preprocess data, please wait...", value = 0.9)
-        prodat.med <- normalizeData(prodat)
-        
-        progress$set(message = "Preprocessing is over.", value = 1)
+        observeEvent(input$proteus_peptide_Render, {
+            if(dataControl$data_type == "LFQ"){
+                renderCheck$proteus_peptide <- 1
+            } else { return(NULL) }
+        })
         
         output$proteus_peptide_summary_out <- renderPrint({
             if(renderCheck$proteus_peptide > 0){
-                summary(pepdat)
+                summary(volcanoLive$prolfq_pepdat)
             } else { return(NULL) }
         })
         
         output$proteus_peptide_distance_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                proteus::plotDistanceMatrix(pepdat)
+                proteus::plotDistanceMatrix(volcanoLive$prolfq_pepdat)
             } else { return(NULL) }
         })
         
         output$proteus_peptide_number_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                proteus::plotCount(pepdat)
+                proteus::plotCount(volcanoLive$prolfq_pepdat)
             } else { return(NULL) }
         })
         
         output$proteus_peptide_jaccard_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                proteus::plotDetectionSimilarity(pepdat, bin.size = 0.02)
+                proteus::plotDetectionSimilarity(volcanoLive$prolfq_pepdat, bin.size = 0.02)
             } else { return(NULL) }
         })
         
         output$proteus_peptide_clustering_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                proteus::plotClustering(pepdat)
+                proteus::plotClustering(volcanoLive$prolfq_pepdat)
             } else { return(NULL) }
         })
         
         output$proteus_peptide_pca_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                plotPCA(volcanoLive$pepdat, dynamic_metadata())
+                plotPCA_pquantr(volcanoLive$pepdat, dynamic_metadata())
             } else { return(NULL) }
         })
         
         
         ## proteus: protein data
         observeEvent(input$proteus_protein_Render, {
-            renderCheck$proteus_protein <- 1
+            if(dataControl$data_type == "LFQ"){
+                renderCheck$proteus_protein <- 1
+            } 
         })
         
         output$proteus_protein_summary_out <- renderPrint({
             if(renderCheck$proteus_protein > 0){
-                summary(prodat)
+                summary(volcanoLive$prolfq_prodat.med)
             } else { return(NULL) }
         })
         
         output$proteus_protein_normalization_median_out <- renderPlot({
             if(renderCheck$proteus_protein > 0){
-                proteus::plotSampleDistributions(prodat.med, title="Median normalization", fill="condition", method="violin")
+                proteus::plotSampleDistributions(volcanoLive$prolfq_prodat.med, title="Median normalization", fill="condition", method="violin")
             } else { return(NULL) }
         })
         
         output$proteus_protein_mean_out <- renderPlot({
             if(renderCheck$proteus_protein > 0){
-                proteus::plotMV(prodat.med, with.loess=TRUE)
+                proteus::plotMV(volcanoLive$prolfq_prodat.med, with.loess=TRUE)
             } else { return(NULL) }
         })
         
         output$proteus_protein_clustering_out <- renderPlot({
             if(renderCheck$proteus_protein > 0){
-                proteus::plotClustering(prodat.med)
+                proteus::plotClustering(volcanoLive$prolfq_prodat.med)
             } else { return(NULL) }
         })
         
+    })
+    
+    
+    ## proteus TMT: peptide data
+    observeEvent(input$proteus_TMT_peptide_Render, {
+        if(dataControl$data_type == "TMT"){
+            renderCheck$proteus_TMT_peptide <- 1
+        }
+    })
+    
+    output$proteus_TMT_peptide_summary_out <- renderPrint({
+        if(renderCheck$proteus_TMT_peptide > 0){
+            summary(volcanoLive$protmt_pepd)
+        } else { return(NULL) }
+    })
+    
+    output$proteus_TMT_peptide_number_out <- renderPlot({
+        if(renderCheck$proteus_TMT_peptide > 0){
+            proteus::plotCount(volcanoLive$protmt_pepd)
+        } else { return(NULL) }
+    })
+    
+    ## proteus TMT: protein data
+    observeEvent(input$proteus_TMT_protein_Render, {
+        if(dataControl$data_type == "TMT"){
+            renderCheck$proteus_TMT_protein <- 1
+        }
+    })
+    
+    output$proteus_TMT_protein_summary_out <- renderPrint({
+        if(renderCheck$proteus_TMT_protein > 0){
+            summary(volcanoLive$protmt_prod)
+        } else { return(NULL) }
+    })
+    
+    output$proteus_TMT_protein_normalization_median_out <- renderPlot({
+        if(renderCheck$proteus_TMT_protein > 0){
+            proteus::plotSampleDistributions(volcanoLive$protmt_prod, log.scale=FALSE, fill="replicate") + labs(title="After")
+        } else { return(NULL) }
+    })
+    
+    output$proteus_TMT_protein_clustering_out <- renderPlot({
+        if(renderCheck$proteus_TMT_protein > 0){
+            proteus::plotClustering(volcanoLive$protmt_prod)
+        } else { return(NULL) }
     })
   
 }
