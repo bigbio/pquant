@@ -21,16 +21,24 @@ RUN apt-get update && apt-get install -y \
     xtail \
     wget \
     gdebi-core \
-    vim
+	vim
 
 # Install library
 RUN install2.r --error --skipinstalled \
-    shinydashboard DT pheatmap shinyjs shinyWidgets IDPmisc devtools htmlwidgets log4r gplots RcppArmadillo BiocManager reshape2 checkmate lme4 ggrepel rhandsontable viridis proteus
+	--repos 'http://cran.rstudio.com' \
+    shinydashboard DT pheatmap shinyjs shinyWidgets IDPmisc devtools htmlwidgets log4r gplots RcppArmadillo BiocManager reshape2 checkmate lme4 ggrepel rhandsontable viridis proteus downloader igraph
 
 RUN installGithub.r Vitek-Lab/MSstats \
     && rm -rf /tmp/downloaded_packages/
 RUN R -e "if (!library(MSstats, logical.return=T)) devtools::install_github('Vitek-Lab/MSstats')"
 RUN R -e "if (!library(MSstats, logical.return=T)) quit(status=10)"
+
+RUN wget https://github.com/Vitek-Lab/MSstatsTMT/archive/refs/heads/master.zip -O /tmp/MSstatsTMT.zip
+RUN unzip /tmp/MSstatsTMT.zip
+RUN R -e "devtools::install_local('MSstatsTMT-master')"
+RUN rm /tmp/MSstatsTMT.zip
+RUN R -e "if (!library(MSstatsTMT, logical.return=T)) devtools::install_github('Vitek-Lab/MSstatsTMT', repos='http://cran.rstudio.com')"
+RUN R -e "if (!library(MSstatsTMT, logical.return=T)) quit(status=10)"
 
 RUN R -e "BiocManager::install('AnnotationDbi')" \
  && R -e "BiocManager::install('org.Hs.eg.db')" \
@@ -43,8 +51,31 @@ RUN install2.r --error --skipinstalled -r http://bioconductor.org/packages/3.0/b
     org.Rn.eg.db \
     && rm -rf /tmp/downloaded_packages/
 
+RUN R -e "BiocManager::install('ggtree')"
+RUN R -e "BiocManager::install('DOSE')"
+RUN R -e "BiocManager::install('GOSemSim')"
 
+RUN wget https://github.com/YuLab-SMU/enrichplot/archive/refs/heads/master.zip -O /tmp/enrichplot.zip
+RUN unzip /tmp/enrichplot
+RUN R -e "devtools::install_local('enrichplot-master')"
+RUN R -e "if (!library(enrichplot, logical.return=T)) devtools::install_github('YuLab-SMU/enrichplot', repos='http://cran.rstudio.com')"
+RUN R -e "if (!library(enrichplot, logical.return=T)) quit(status=10)"
 
+RUN wget https://github.com/YuLab-SMU/clusterProfiler/archive/refs/heads/master.zip -O /tmp/clusterProfiler.zip
+RUN unzip /tmp/clusterProfiler.zip
+RUN R -e "devtools::install_local('clusterProfiler-master')"
+RUN rm /tmp/clusterProfiler.zip
+RUN R -e "if (!library(clusterProfiler, logical.return=T)) devtools::install_github('YuLab-SMU/clusterProfiler', repos='http://cran.rstudio.com')"
+RUN R -e "if (!library(clusterProfiler, logical.return=T)) quit(status=10)"
+
+RUN installGithub.r bartongroup/Proteus \
+    && rm -rf /tmp/downloaded_packages/
+RUN R -e "if (!library(proteus, logical.return=T)) devtools::install_github('bartongroup/Proteus')"
+RUN R -e "if (!library(proteus, logical.return=T)) quit(status=10)"
+
+RUN install2.r --error --skipinstalled \
+	--repos 'http://cran.rstudio.com' \
+    R.utils
 
 ### --------------------------------------
 
