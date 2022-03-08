@@ -74,11 +74,31 @@ dynamic_jitterPlot <- function(tab, input, pdat, max_points, meta) {
       m <- colMeans(dat, na.rm = TRUE)
       s <- apply(dat, 2, function(x) sd(x, na.rm = TRUE) / sqrt(na.omit(length(x))))
       n <- length(sel)
+      
+      meta_conditions <- meta$condition
+      for (i in 1:length(meta_conditions)){
+        
+          meta_cond <- meta_conditions[i]
+          
+          if (nchar(meta_cond) > 32) {
+              cond <- unlist(strsplit(meta_cond, split = " "))
+              
+              tmp_abb = NULL
+          
+              for (str in cond) {
+                abb <- substr(str, 0, 1)  #name is too long, only to extract the first letter of each word
+                tmp_abb <- paste(tmp_abb, abb, sep = " ")
+              }
+              
+              meta_conditions[i] <- substr(tmp_abb, 2, nchar(tmp_abb))
+          }
+      }
+      
       p <- data.frame(
         intensity = m,
         lo = m - s,
         up = m + s,
-        condition = factor(meta$condition)
+        condition = factor(meta_conditions)
       )
       p$shape <- rep(21, length(p$intensity))
       p$shape[which(p$intensity==0)] <- 24
