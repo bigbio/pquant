@@ -99,7 +99,7 @@ ui <- dashboardPage(
                                                                        label = "Choose normalization",
                                                                        choices = c("equalizeMedians" = "equalizeMedians",
                                                                                    "quantile" = "quantile",
-                                                                                   "globalStandards" = "globalStandards",
+                                                                                   #"globalStandards" = "globalStandards",
                                                                                    "no normalization" = "FALSE"),
                                                                        selected = "equalizeMedians"),
                                                          
@@ -430,6 +430,7 @@ ui <- dashboardPage(
                                                                                 plotOutput("dynamic_plotVolcano_out", height = "600px", width = "80%", brush = "plot_brush",hover="plot_hover"),
                                                                                 DT::dataTableOutput("dynamic_significanceTable_out")),
                                                                          column(6,
+                                                                                fluidRow(p("The report errors is not really a mistake, just drag mouse to choose the protein(s), reds will disappear.")),br(),
                                                                                 fluidRow(
                                                                                          column(4,
                                                                                                 radioButtons("intensityScale","Intesity Scale:",choices = c("Linear scale" = "","Log scale"="Log"),inline = TRUE))),
@@ -454,6 +455,7 @@ ui <- dashboardPage(
                                                                          plotOutput("dynamic_plotFID_out", height = "600px", width = "80%", brush = "plot_brush",hover="plot_hover"),
                                                                          DT::dataTableOutput("dynamic_FID_significanceTable_out")),
                                                                   column(6,
+                                                                         fluidRow(p("The report errors is not really a mistake, just drag mouse to choose the protein(s), reds will disappear.")),br(),
                                                                          fluidRow(
                                                                            column(4,
                                                                                   radioButtons("dynamic_FID_intensityScale","Intesity Scale:",choices = c("Linear scale" = "","Log scale"="Log"),inline = TRUE))),
@@ -551,7 +553,7 @@ ui <- dashboardPage(
 
 # Define server logic ----
 server <- function(input, output, session) {
-    options(shiny.maxRequestSize=520*1024^2)
+    options(shiny.maxRequestSize=700*1024^2)
     options(ggrepel.max.overlaps = Inf)
     
     env <<- NULL
@@ -750,84 +752,104 @@ server <- function(input, output, session) {
     
     ###start_preprocess 
     observeEvent(input$start_preprocess, {
-      
-        sendSweetAlert(
-            session = session,
-            title = "Judge species",
-            text = "Start to judge the type of species, please wait...",
-            type = "success", 
-            closeOnClickOutside = TRUE,
-            width = 400
-        )
-      
+        disable("start_preprocess")
         progress <- shiny::Progress$new()
         on.exit(progress$close())
         
-        progress$set(message = "Begin to judge species, please wait...", value = 0.1)
+        progress$set(message = "start to preprocess, please wait...", value = 0.3)
+     
+        sendSweetAlert(
+          session = session,
+          title = "Start",
+          text = "Is starting, please wait...",
+          type = "success", 
+          closeOnClickOutside = TRUE,
+          width = 400
+        )
       
         fileData <- inputdf()
+        progress$set(message = "Is starting, please wait...", value = 0.6)
         
-        df <- fileData
-        progress$set(message = "Begin to judge species, please wait...", value = 0.2)
-        tmp_origin <- lapply(strsplit(as.character(df$ProteinName), "\\;"), "[")
-        progress$set(message = "Begin to judge species, please wait....", value = 0.3)
-        tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))
+        if(sum("Mixture" == colnames(fileData)) == 1){ dataControl$data_type <- "TMT"
+        }else{ dataControl$data_type <- "LFQ" }
+      
+        progress$set(message = "start to preprocess, please wait...", value = 1)
         
-        tmp <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
-        progress$set(message = "Begin to judge species, please wait...", value = 0.4)
-        for(i in array(1:length(colnames(tmp_df)))){
-          tmp[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
-        }
-        
-        progress$set(message = "Begin to judge species, please wait...", value = 0.6)
-        s <- strsplit(as.character(tmp_df[,1]), "\\_")
-        progress$set(message = "Begin to judge species, please wait...", value = 0.7)
-        rs <- purrr::map2(s, lengths(s), pluck)
-        progress$set(message = "Begin to judge species, please wait...", value = 0.8)
-        rs_df <- t(as.data.frame(rs))
-        species <- unique(unlist(rs))
-        
-        have_species <- c("HUMAN", "YEAST", "RAT", "ECOLI")
-        sp_count <- 0
-        for(sp in species){
-            if(sum(grepl(sp, have_species))){
-                sp_count <- sp_count + 1
-            }
-        }
-        if(sp_count == length(species)){
-            dataControl$db_type <- "yes"
-        }
-        
-        progress$set(message = "Judging over.", value = 1)
-
-        if(dataControl$db_type != "yes"){
+        if(sum("Fraction" == colnames(fileData)) == 1 & sum("TechReplicate" == colnames(fileData)) == 0
+           & dataControl$data_type == "LFQ")
+        {
+          sendSweetAlert(
+            session = session,
+            title = "Warning",
+            text = "For data with the [Fraction] column, please add the corresponding [TechReplicate] column then re-upload",
+            type = "warning", 
+            closeOnClickOutside = TRUE,
+            width = 400
+          )
+        }else{
+          
+            progress$close()
+            
             sendSweetAlert(
                 session = session,
-                title = "Warning",
-                text = "Currently, only 'Human', 'Yeast', 'Rat' and 'Ecoli' species are supported。If the data contains other species, please contact developers to add.",
-                type = "warning", 
+                title = "Judge species",
+                text = "Start to judge the type of species, please wait...",
+                type = "success", 
                 closeOnClickOutside = TRUE,
                 width = 400
             )
-        }else{
-            if(sum("Mixture" == colnames(fileData)) == 1){
-                dataControl$data_type <- "TMT"
-            }else{
-                dataControl$data_type <- "LFQ"
-            }
           
-            if(sum("Fraction" == colnames(fileData)) == 1 & sum("TechReplicate" == colnames(fileData)) == 0
-               & dataControl$data_type == "LFQ")
-            {
+            progress <- shiny::Progress$new()
+            on.exit(progress$close())
+            
+            progress$set(message = "Begin to judge species, please wait...", value = 0.1)
+            
+            df <- fileData
+            df <- df[grep("CONTAMINANT", df$ProteinName, invert = TRUE) , ]
+            progress$set(message = "Begin to judge species, please wait...", value = 0.2)
+            tmp_origin <- lapply(strsplit(as.character(df$ProteinName), "\\;"), "[")
+            progress$set(message = "Begin to judge species, please wait....", value = 0.3)
+            tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))
+            
+            tmp <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
+            progress$set(message = "Begin to judge species, please wait...", value = 0.4)
+            for(i in array(1:length(colnames(tmp_df)))){
+              tmp[,i] <- unlist(lapply(strsplit(as.character(tmp_df[,i]), "\\|"), "[", 2))
+            }
+            
+            progress$set(message = "Begin to judge species, please wait...", value = 0.6)
+            s <- strsplit(as.character(tmp_df[,1]), "\\_")
+            progress$set(message = "Begin to judge species, please wait...", value = 0.7)
+            rs <- purrr::map2(s, lengths(s), pluck)
+            progress$set(message = "Begin to judge species, please wait...", value = 0.8)
+            rs_df <- t(as.data.frame(rs))
+            species <- unique(unlist(rs))
+            
+            have_species <- c("HUMAN", "YEAST", "RAT", "ECOLI")
+            sp_count <- 0
+            for(sp in species){
+                if(sum(grepl(sp, have_species))){
+                    sp_count <- sp_count + 1
+                }
+            }
+            if(sp_count == length(species)){
+                dataControl$db_type <- "yes"
+            }
+            
+            progress$set(message = "Judging over.", value = 1)
+            progress$close()
+    
+            if(dataControl$db_type != "yes"){
                 sendSweetAlert(
                     session = session,
                     title = "Warning",
-                    text = "For data with the [Fraction] column, please add the corresponding [TechReplicate] column then re-upload",
+                    text = "Currently, only 'Human', 'Yeast', 'Rat' and 'Ecoli' species are supported。If the data contains other species, please contact developers to add.",
                     type = "warning", 
                     closeOnClickOutside = TRUE,
                     width = 400
                 )
             }else{
+              
                 ### progress function
               
                 sendSweetAlert(
@@ -867,17 +889,17 @@ server <- function(input, output, session) {
                         for(i in array(1:length(colnames(tmp_df)))){
                             uniKeys <- as.character(tmp[,i])
                             
-                            if('try-error' %in% class(try(AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")))){
-                                tmp_geneid <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=1))
-                                colnames(tmp_geneid)[1] <- 'ENTREZID'
-                                mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
-                            }else{
+                            tryCatch({
                                 tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
                                 tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
                                 tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
                                 tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
                                 mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
-                            }
+                            }, error = function(e){
+                                tmp_geneid <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=1))
+                                colnames(tmp_geneid)[1] <- 'ENTREZID'
+                                mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
+                            })
                         }
                     }
                     
@@ -899,25 +921,22 @@ server <- function(input, output, session) {
                     rownames(rs_df) <- df_colnames
                     rownames(mapping_geneid) <- df_colnames
                     
-                    mapping_geneid <- mapping_geneid[!(row.names(mapping_geneid) %in% rows),]
-                    rs_df <- rs_df[!(row.names(rs_df) %in% rows),]
-                    df <- df[!(row.names(df) %in% rows),]
-                    fileData <- fileData[!(row.names(fileData) %in% rows),]
+                    mapping_geneid_use <- mapping_geneid[!(row.names(mapping_geneid) %in% rows),]
+                    rs_df <- rs_df[!(row.names(mapping_geneid) %in% rows),]
+                    df <- df[!(row.names(mapping_geneid) %in% rows),]
+                    fileData_df <- df
                     
-                    print(length(row.names(mapping_geneid)))
-                    print(length(row.names(rs_df)))
-                    print(length(row.names(df)))
-                    print(length(row.names(fileData)))
-                    
-                    df$mapping_geneid <- mapping_geneid
+                    df$mapping_geneid <- mapping_geneid_use
                     df$rs_df <- rs_df
                     acc_sp <- tidyr::unite(df, "ProteinName", mapping_geneid, rs_df, sep="_")
-                    fileData$ProteinName = acc_sp$ProteinName
+                    fileData_df$ProteinName = acc_sp$ProteinName
+                    fileData <- fileData_df
                     
                 } else {
                   
                     # Protein accession clean
                     df <- fileData
+                    df <- df[grep("CONTAMINANT", df$ProteinName, invert = TRUE) , ]
                     tmp_origin <- lapply(strsplit(as.character(df$ProteinName), "\\;"), "[")    # type: list
                     tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
                     tmp_access <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=length(colnames(tmp_df))))
@@ -931,10 +950,13 @@ server <- function(input, output, session) {
                     }
                     names(tmp_access) <- cols_proName
                     pro_accession <- tidyr::unite(tmp_access, "ProteinName", cols_proName, sep=";", na.rm=TRUE)
+                    fileData_df <- df
                     df$pro_accession <- pro_accession$ProteinName
                     df$rs_df <- rs_df
                     acc_sp <- tidyr::unite(df, "ProteinName", pro_accession, rs_df, sep="_")
-                    fileData$ProteinName = acc_sp$ProteinName
+
+                    fileData_df$ProteinName = acc_sp$ProteinName
+                    fileData <- fileData_df
                 }
                 
                 progress$set(message = "Begin to preprocess data, please wait...", value = 0.2)
@@ -1006,13 +1028,13 @@ server <- function(input, output, session) {
                                                                                 moderated = TRUE,
                                                                                 save_fitted_models = TRUE,
                                                                                 use_log_file = FALSE)
-
+    
                 }
                 
                 progress$set(message = "Begin to convert ID, please wait...", value = 0.8)
                 if(input$user_choose_pre_pro2gene == FALSE){
                     #map protein accsession to geneID + geneName
-
+    
                     if(dataControl$data_type == "LFQ"){
                         df_protein <- as.character(prePquant$DDA2009.comparisons$ComparisonResult$Protein)
                     }else{
@@ -1027,7 +1049,7 @@ server <- function(input, output, session) {
                         } else if(sp == "YEAST"){ db_type = org.Sc.sgd.db
                         } else if(sp == "RAT"){ db_type = org.Rn.eg.db 
                         } else if(sp == "ECOLI") { db_type = org.EcK12.eg.db }
-
+    
                         df_s <- unlist(lapply(strsplit(df_protein, "\\_"), "[", 2))
                         df_proname <- unlist(lapply(strsplit(df_protein, "\\_"), "[", 1))
                         df_s_proname <- data.frame(df_s, df_proname)
@@ -1041,42 +1063,42 @@ server <- function(input, output, session) {
                         for(i in array(1:length(colnames(tmp_df)))){
                             uniKeys <- as.character(tmp[,i])
                             
-                            if('try-error' %in% class(try(AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")))){
-                                tmp_geneid <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=1))
-                                colnames(tmp_geneid)[1] <- 'ENTREZID'
-                                mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
-                            }else{
+                            tryCatch({
                                 tmp_geneid <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="ENTREZID", keytype="UNIPROT")
                                 tmp_geneid <- data.frame(matrix(lapply(tmp_geneid, as.character)))
                                 tmp_geneid <- unlist(lapply(tmp_geneid[,1],function(x) if(identical(x,character(0))) NA else x))
                                 tmp_geneid <- data.frame("ENTREZID"=tmp_geneid)
                                 mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
-                            }
+                            }, error = function(e){
+                                tmp_geneid <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=1))
+                                colnames(tmp_geneid)[1] <- 'ENTREZID'
+                                mapping_geneid <- cbind(mapping_geneid, tmp_geneid)
+                            })
                             
                             if(species == "YEAST"){  #YEAST数据库没有SYMBOL列，对应的是GENENAME列
-                                if('try-error' %in% class(try(AnnotationDbi::mapIds(db_type, keys=uniKeys, column="GENENAME", keytype="UNIPROT")))){
-                                    tmp_genename <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=1))
-                                    colnames(tmp_genename)[1] <- 'GENENAME'
-                                    mapping_genename <- cbind(mapping_genename, tmp_genename)
-                                }else{
+                                tryCatch({
                                     tmp_genename <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="GENENAME", keytype="UNIPROT")
                                     tmp_genename <- data.frame(matrix(lapply(tmp_genename, as.character)))
                                     tmp_genename <- unlist(lapply(tmp_genename[,1],function(x) if(identical(x,character(0))) NA else x))
                                     tmp_genename <- data.frame("GENENAME"=tmp_genename)
                                     mapping_genename <- cbind(mapping_genename, tmp_genename)
-                              }
-                            } else {
-                                if('try-error' %in% class(try(AnnotationDbi::mapIds(db_type, keys=uniKeys, column="SYMBOL", keytype="UNIPROT")))){
+                                }, error = function(e){
                                     tmp_genename <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=1))
                                     colnames(tmp_genename)[1] <- 'GENENAME'
                                     mapping_genename <- cbind(mapping_genename, tmp_genename)
-                                }else{
+                                })
+                            } else {
+                                tryCatch({
                                     tmp_genename <- AnnotationDbi::mapIds(db_type, keys=uniKeys, column="SYMBOL", keytype="UNIPROT")
                                     tmp_genename <- data.frame(matrix(lapply(tmp_genename, as.character)))
                                     tmp_genename <- unlist(lapply(tmp_genename[,1],function(x) if(identical(x,character(0))) NA else x))
                                     tmp_genename <- data.frame("GENENAME"=tmp_genename)
                                     mapping_genename <- cbind(mapping_genename, tmp_genename)
-                                }
+                                }, error = function(e){
+                                    tmp_genename <- as.data.frame(matrix(nrow=length(rownames(tmp_df)),ncol=1))
+                                    colnames(tmp_genename)[1] <- 'GENENAME'
+                                    mapping_genename <- cbind(mapping_genename, tmp_genename)
+                                })
                             }
                         }
                     }
@@ -1116,7 +1138,7 @@ server <- function(input, output, session) {
                     
                     tmp_origin <- lapply(strsplit(as.character(df_s_proname$df_proname), "\\;"), "[")    # type: list
                     tmp_df <- as.data.frame(t(sapply(tmp_origin, "[", i = 1:max(sapply(tmp_origin, length)))))  # list to df
-
+    
                     mapping_geneid <- tmp_df
                   
                     mapping_genename <- data.frame(ProteinName = mapping_geneid <- tmp_df[,1])
@@ -1137,7 +1159,7 @@ server <- function(input, output, session) {
                         cols_GENENAME <- cols_GENENAME %>% append(paste("GENENAME.SYMBOL", ".", i, sep = ""))
                     }
                     mapping_genename <- tidyr::unite(mapping_genename, "GENENAME", cols_GENENAME, sep=";", na.rm=TRUE)
-
+    
                     if(dataControl$data_type == "LFQ"){
                         prePquant$DDA2009.comparisons$ComparisonResult$GENENAME <- mapping_genename$GENENAME
                     }else{
@@ -1513,11 +1535,11 @@ server <- function(input, output, session) {
             if(dataControl$data_type == "LFQ"){
                 groupComparisonPlots(data = prePquant$DDA2009.comparisons$ComparisonResult, type = 'VolcanoPlot',
                                      which.Comparison=input$default_method_volcano_input,
-                                     width=5, height=5, address=FALSE)
+                                     width=5, height=5, address=FALSE, ProteinName=FALSE)
             }else{
                 groupComparisonPlots_TMT(data = prePquant$test.pairwise$ComparisonResult, type = 'VolcanoPlot',
                                          which.Comparison=input$default_method_volcano_input,
-                                         width=5, height=5, address=FALSE)}
+                                         width=5, height=5, address=FALSE, ProteinName=FALSE)}
         } else { return(NULL) }
     })
     
@@ -1553,8 +1575,40 @@ server <- function(input, output, session) {
             }
             
             
+            #避免列名太长导致图片显示不全，效果不好，换一种方法
+            MS_colnames <- colnames(MS_output)[-1]
+            
+            for (i in 1:length(MS_colnames)){
+                if (nchar(MS_colnames[i]) > 50) {
+                    tmp <- strsplit(MS_colnames[i], split = "-")
+                    l1 <- unlist(tmp)[1]
+                    l2 <- unlist(tmp)[2]
+                    
+                    tmp1_abb = NULL
+                    for (str in tmp[[1]]) {   # 提取每个字符串的前3个字母拼接到一起，看看是不是还长，是的话就只要前1个字母
+                        abb <- substr(str, 0, 3)
+                        tmp1_abb <- paste(tmp1_abb, abb, sep = " ")
+                    }
+                    l1_abb <- substr(tmp1_abb, 2, nchar(tmp1_abb))   #去掉开头的空格
+                    
+                    tmp2_abb = NULL
+                    for (str in tmp[[1]]) {
+                        abb <- substr(str, 0, 3)
+                        tmp2_abb <- paste(tmp1_abb, abb, sep = " ")
+                    }
+                    l2_abb <- substr(tmp1_abb, 2, nchar(tmp1_abb))
+                    
+                    abb <- paste(l1_abb, l2_abb, sep = "-")
+                    MS_colnames[i] <- abb
+                }
+            }
+            
+            colnames(heatmap) <- MS_colnames
+            
+            
+            
             if(nrow(heatmap) > 50){
-              pheatmap::pheatmap(heatmap, show_rownames = F)
+                pheatmap::pheatmap(heatmap, show_rownames = F)
             }else{ pheatmap::pheatmap(heatmap) }
             
             
@@ -2225,52 +2279,52 @@ server <- function(input, output, session) {
         })
         
         output$proteus_peptide_distance_out <- renderPlot({
-            if(renderCheck$proteus_peptide > 0){
-                if('try-error' %in% class(try(proteus::plotDistanceMatrix(volcanoLive$prolfq_pepdat)))){
-                    return(NULL)
-                }else{
+            if(renderCheck$proteus_peptide > 0){             
+                tryCatch({
                     proteus::plotDistanceMatrix(volcanoLive$prolfq_pepdat)
-                }
+                }, error = function(e){
+                    return(NULL)
+                })
             } else { return(NULL) }
         })
         
         output$proteus_peptide_number_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                #if('try-error' %in% class(try(proteus::plotCount(volcanoLive$prolfq_pepdat)))){
-                #    return(NULL)
-                #}else{
+                tryCatch({
                     proteus::plotCount(volcanoLive$prolfq_pepdat)
-                #}
+                }, error = function(e){
+                    return(NULL)
+                })
             } else { return(NULL) }
         })
         
         output$proteus_peptide_jaccard_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                #if('try-error' %in% class(try(proteus::plotDetectionSimilarity(volcanoLive$prolfq_pepdat, bin.size = 0.02)))){
-                #    return(NULL)
-                #}else{
+                tryCatch({
                     proteus::plotDetectionSimilarity(volcanoLive$prolfq_pepdat, bin.size = 0.02)
-                #}
+                }, error = function(e){
+                    return(NULL)
+                })
             } else { return(NULL) }
         })
         
         output$proteus_peptide_clustering_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                if('try-error' %in% class(try(proteus::plotClustering(volcanoLive$prolfq_pepdat)))){
-                    return(NULL)
-                }else{
+                tryCatch({
                     proteus::plotClustering(volcanoLive$prolfq_pepdat)
-                }
+                }, error = function(e){
+                    return(NULL)
+                })
             } else { return(NULL) }
         })
         
         output$proteus_peptide_pca_out <- renderPlot({
             if(renderCheck$proteus_peptide > 0){
-                if('try-error' %in% class(try(plotPCA_pquantr(volcanoLive$pepdat, dynamic_metadata())))){
-                    return(NULL)
-                }else{
+                tryCatch({
                     plotPCA_pquantr(volcanoLive$pepdat, dynamic_metadata())
-                }
+                }, error = function(e){
+                    return(NULL)
+                })
             } else { return(NULL) }
         })
         
@@ -2279,7 +2333,7 @@ server <- function(input, output, session) {
         observeEvent(input$proteus_protein_Render, {
             if(dataControl$data_type == "LFQ"){
                 renderCheck$proteus_protein <- 1
-            } 
+            } else { return(NULL) }
         })
         
         output$proteus_protein_summary_out <- renderPrint({
@@ -2308,6 +2362,14 @@ server <- function(input, output, session) {
         
     })
     
+    observe({
+        if(renderCheck$proteus_peptide > 0){ disable("proteus_peptide_Render") }
+    })
+    
+    observe({
+        if(renderCheck$proteus_protein > 0){ disable("proteus_protein_Render") }
+    })
+    
     
     ## proteus TMT: peptide data
     observeEvent(input$proteus_TMT_peptide_Render, {
@@ -2315,6 +2377,7 @@ server <- function(input, output, session) {
             renderCheck$proteus_TMT_peptide <- 1
         }
     })
+    
     
     output$proteus_TMT_peptide_summary_out <- renderPrint({
         if(renderCheck$proteus_TMT_peptide > 0){
@@ -2351,6 +2414,14 @@ server <- function(input, output, session) {
         if(renderCheck$proteus_TMT_protein > 0){
             proteus::plotClustering(volcanoLive$protmt_prod)
         } else { return(NULL) }
+    })
+    
+    observe({
+        if(renderCheck$proteus_TMT_peptide > 0){ disable("proteus_TMT_peptide_Render") }
+    })
+    
+    observe({
+        if(renderCheck$proteus_TMT_protein > 0){ disable("proteus_TMT_protein_Render") }
     })
   
 }
